@@ -1,0 +1,18 @@
+{application, erlgame,
+ [{description, "Erlang Game"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {mod, {erlgame_app, []}},
+  {applications,
+   [kernel,
+    stdlib,
+    gproc,
+    inets,
+    ssl
+   ]},
+  {env,[]},
+  {modules, []},
+
+  {licenses, ["Apache 2.0"]},
+  {links, []}
+ ]}.
