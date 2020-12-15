@@ -1,0 +1,8 @@
+[{<<"gproc">>,
+  {git,"https://github.com/uwiger/gproc",
+       {ref,"3737f2b958a5908d7a3870046ae162c5b9bf971c"}},
+  0},
+ {<<"redbug">>,
+  {git,"https://github.com/massemanet/redbug",
+       {ref,"c583d4567d1e2b8a540593ad0512559798d42565"}},
+  0}].

@@ -13,4 +13,7 @@
 %%% Global Defines
 %%%===================================================================
 
+%% Database Name
+-define(DB_NAME, erlgame_db).
+
 -endif. %% erlgame

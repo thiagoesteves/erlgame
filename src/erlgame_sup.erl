@@ -10,6 +10,15 @@
 
 -author('Thiago Esteves').
 
+%%%===================================================================
+%%% Includes
+%%%===================================================================
+
+-include("erlgame.hrl").
+
+%% For LOG purposes
+-include_lib("kernel/include/logger.hrl").
+
 %%====================================================================
 %% API functions
 %%====================================================================
@@ -36,7 +45,13 @@ init([]) ->
                intensity => 4,
                period => 30},
 
-  ChildSpecs = [],
+  ChildSpecs = [
+                  #{id => ?DB_NAME,
+                    start => {?DB_NAME, start_link, []},
+                    restart => permanent,
+                    type => worker,
+                    shutdown => brutal_kill}
+                ],
   {ok, {SupFlags, ChildSpecs}}.
 
 %%====================================================================

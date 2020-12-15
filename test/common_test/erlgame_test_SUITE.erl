@@ -30,14 +30,18 @@
 %%% local Defines
 %%%===================================================================
 
-
+-define(TEST_MAX_USERS, 1000).
 
 %%%===================================================================
 %%% Test exports
 %%%===================================================================
--export([my_first_test_ok/1]).
+-export([erlgame_start_stop_ok/1,
+         erlgame_db_insert_read/1,
+         erlgame_db_full_coverage_ok/1]).
 
-all() -> [my_first_test_ok
+all() -> [erlgame_start_stop_ok,
+          erlgame_db_insert_read,
+          erlgame_db_full_coverage_ok
          ].
 
 %%%===================================================================
@@ -80,16 +84,16 @@ end_per_testcase(_, _Config) ->
 %%%===================================================================
 
 %%%===================================================================
-%%% Function: my_first_test_ok
+%%% Function: erlgame_start_stop_ok
 %%%
 %%% Description: Test the start/stop of the application
 %%%===================================================================
-my_first_test_ok(_Config) ->
+erlgame_start_stop_ok(_Config) ->
 
   %% Start the Server
   application:ensure_all_started(erlgame),
 
-  %% Check the server is still running
+  %% Create users, add points, check result
   ?assertNotEqual( undefined, try_get_state(erlgame_sup) ),
 
   %% Stop Server
@@ -97,6 +101,66 @@ my_first_test_ok(_Config) ->
 
   %% Check the server is not running anymore
   ?assertMatch( undefined, try_get_state(erlgame_sup) ),
+
+  ok.
+
+%%%===================================================================
+%%% Function: erlgame_db_insert_read
+%%%
+%%% Description: Test the start/stop of the application
+%%%===================================================================
+erlgame_db_insert_read(_Config) ->
+
+  %% Start the Server
+  application:ensure_all_started(erlgame),
+
+  UserList = lists:map(
+      fun(User) ->
+        { erlang:list_to_atom("user:" ++ erlang:integer_to_list(User)),
+          rand:uniform(5000) }
+      end,
+      lists:seq(1,?TEST_MAX_USERS)
+    ),
+
+  %% Create users
+  lists:foreach(
+    fun( {UserId, _Points} )->
+      ?assertEqual( {ok, 0}, erlgame_db:get_user_points(UserId) )
+    end,
+    UserList),
+
+  %% Add random points
+  lists:foreach(
+    fun( {UserId, Points} )->
+      ?assertEqual( ok, erlgame_db:add_user_points(UserId, Points) )
+    end,
+    UserList),
+  
+  %% wait the update
+  timer:sleep(100),
+
+  %% Check current values
+  lists:foreach(
+    fun( {UserId, Points} )->
+      ?assertEqual( {ok, Points}, erlgame_db:get_user_points(UserId) )
+    end,
+    UserList),
+
+  ok.
+
+%%%===================================================================
+%%% Function: erlgame_db_full_coverage_ok
+%%%
+%%% Description: This test will only guarantee 100% coverage for
+%%%              erlgame_db.erl
+%%%===================================================================
+erlgame_db_full_coverage_ok(_Config) ->
+  %% Start the Server
+  application:ensure_all_started(erlgame),
+
+  erlang:send(?DB_NAME, {none}),
+  erlgame_db:code_change(none, none, none),
+  erlgame_db:terminate(normal, none),
 
   ok.
 
