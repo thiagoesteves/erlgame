@@ -34,29 +34,35 @@
 %% gen_statem states
 -export([join/3,
          play/3,
-         finish/3]).
+         game_over/3]).
 
 %% Public API
 -export([start_link/0,
          start_link/1,
          join_game/1,
-         start_game/0]).
+         start_game/0,
+         action/2,
+         print_position/4]).
 
 %%%===================================================================
 %%% Local Defines
 %%%===================================================================
 
 %% Default size
--define(DEFAULT_SIZE, {50,50} ).
+-define(DEFAULT_SIZE, {19,19} ).
 
 %% Local database name
 -define(GAME_INFO, snake_db).
+
+%% Loop control info
+-define(LOOP_MSG,     loop_control).
+-define(LOOP_TIMEOUT, 1000).
 
 %% gen_statem definitions
 -define(HANDLE_COMMON,
   ?FUNCTION_NAME(T, C, D) -> handle_common(T, C, ?FUNCTION_NAME, D)).
 
--type snake_sm_states() :: join | play | finish.
+-type snake_sm_states() :: join | play | game_over.
 
 %%%===================================================================
 %%% API
@@ -79,9 +85,11 @@ init(Matrix) ->
   logger:set_module_level(?MODULE, debug),
   %% Create a cashed table and the database table
   ets:new(?GAME_INFO, [set, named_table]),
-  GenStatemData = #{ matrix => Matrix,
-                     user   => undefined,
-                     points => undefined },
+  GenStatemData = #{ matrix      => Matrix,
+                     user        => undefined,
+                     points      => undefined,
+                     position    => {0,0},
+                     last_action => idle },
   {ok, join, GenStatemData}.
 
 %% @private
@@ -129,21 +137,33 @@ join({call,From}, { start_game }, GenStatemData) ->
 %%% JOIN STATE ================================================================
 play(enter, _OldState, GenStatemData) ->
   ?LOG_DEBUG("Play - enter state"),
+  %% Start the loop control, which will check and play with the user
+  erlang:send_after(?LOOP_TIMEOUT, self(), ?LOOP_MSG),
   {keep_state, GenStatemData};
 
-play(cast, _MSG, GenStatemData) ->
+play(cast, {action, UserId, Action}, GenStatemData = #{user := UserId}) ->
+  ?LOG_DEBUG("Moving the User"),
+  {keep_state, GenStatemData#{ last_action := Action }};
+
+play(info, loop_control, GenStatemData) ->
   ?LOG_DEBUG("Play - Action"),
-  {keep_state, GenStatemData};
+  case update_user_actions(GenStatemData) of
+    {keep_state, NewState} -> %% keep the cycle running
+                  erlang:send_after(?LOOP_TIMEOUT, self(), ?LOOP_MSG),
+                  {keep_state, NewState};
+    {end_game, NewState} -> %% Game Over
+                  {next_state, game_over, NewState}
+  end;
 
 ?HANDLE_COMMON.
 
 %%% JOIN STATE ================================================================
-finish(enter, _OldState, GenStatemData) ->
-  ?LOG_DEBUG("Finish - enter state"),
+game_over(enter, _OldState, GenStatemData) ->
+  ?LOG_DEBUG("Game Over - enter state"),
   {keep_state, GenStatemData};
 
-finish(cast, _MSG, GenStatemData) ->
-  ?LOG_DEBUG("Finish - Action"),
+game_over(cast, _MSG, GenStatemData) ->
+  ?LOG_DEBUG("Game Over - Action"),
   {keep_state, GenStatemData};
 
 ?HANDLE_COMMON.
@@ -185,10 +205,90 @@ join_game(UserId) when is_list(UserId) ->
 start_game() ->
   gen_statem:call(?MODULE, {start_game}).
 
+%%--------------------------------------------------------------------
+%% @doc This function execute actions for the player
+%%
+%% @param UserId User ID name
+%% @param Action Action to be executed 
+%% @end
+%%--------------------------------------------------------------------
+-spec action(UserId :: list(), Action :: move()) -> ok.
+action(UserId, Action) when is_list(UserId), is_atom(Action) ->
+  gen_statem:cast(?MODULE, {action, maybe_string_to_atom(UserId), Action}).
+
 %%====================================================================
 %% Internal functions
 %%====================================================================
 
+%%--------------------------------------------------------------------
+%% @doc Update user action and check points
+%%
+%% @param S Module state
+%% @end
+%%--------------------------------------------------------------------
+-spec update_user_actions(S :: map()) -> {keep_state | end_game, map()}.
+update_user_actions(S = #{ last_action := idle }) ->
+  ?LOG_DEBUG("User didn't make the first move"),
+  {keep_state,S};
+update_user_actions(S = #{ matrix := {MaxX,_}, position := {MaxX,_},
+                       last_action := ?MOVE_RIGHT}) ->
+  {end_game,S};
+update_user_actions(S = #{ position := {0,_}, last_action := ?MOVE_LEFT}) ->
+  {end_game,S};
+update_user_actions(S = #{ matrix := {_,MaxY}, position := {_,MaxY},
+                       last_action := ?MOVE_UP}) ->
+  {end_game,S};
+update_user_actions(S = #{ position := {_,0}, last_action := ?MOVE_DOWN}) ->
+  {end_game,S};
+update_user_actions(S = #{ user := _User, points := _Points, position := {Px,Py},
+                           last_action := ?MOVE_UP}) ->
+  print_position(19,19,Px,Py+1),
+  {keep_state,S#{position := {Px,Py+1}}};
+update_user_actions(S = #{ user := _User, points := _Points, position := {Px,Py},
+                           last_action := ?MOVE_DOWN}) ->
+  print_position(19,19,Px,Py-1),
+  {keep_state,S#{position := {Px,Py-1}}};
+update_user_actions(S = #{ user := _User, points := _Points, position := {Px,Py},
+                           last_action := ?MOVE_RIGHT}) ->
+  print_position(19,19,Px+1,Py),
+  {keep_state,S#{position := {Px+1,Py}}};
+update_user_actions(S = #{ user := _User, points := _Points, position := {Px,Py},
+                           last_action := ?MOVE_LEFT}) ->
+  print_position(19,19,Px-1,Py),
+  {keep_state,S#{position := {Px-1,Py}}}.
+
+%%--------------------------------------------------------------------
+%% @doc Print the current position in ASCII
+%%
+%% @param MaxX Maximum X position
+%% @param MaxY Maximum Y position
+%% @param Px Current X position
+%% @param Py Current Y position
+%% @end
+%%--------------------------------------------------------------------
+print_position(MaxX,MaxY,Px,Py) ->
+  io:format("\ec~n"),
+  lists:foreach(
+    fun(Y) ->
+      io:format("|"),
+      lists:foreach(
+          fun(X) ->
+            case {X,Y} of
+              {Px,Py} -> io:format("+");
+              _-> io:format(" ")
+              end
+          end,
+          lists:seq(0,MaxX)),
+      io:format("|~n")
+    end,
+    lists:reverse(lists:seq(0,MaxY)) ).
+
+%%--------------------------------------------------------------------
+%% @doc Try to create a atom from a list or use an existing one
+%%
+%% @param Str String to be converted
+%% @end
+%%--------------------------------------------------------------------
 -spec maybe_string_to_atom(Str :: list()) -> atom().
 maybe_string_to_atom(Str) when is_list(Str) ->
   try 
