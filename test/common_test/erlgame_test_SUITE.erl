@@ -117,6 +117,7 @@ erlgame_db_insert_read(_Config) ->
   UserList = lists:map(
       fun(User) ->
         { erlang:list_to_atom("user:" ++ erlang:integer_to_list(User)),
+          ?MODULE,
           rand:uniform(5000) }
       end,
       lists:seq(1,?TEST_MAX_USERS)
@@ -124,15 +125,15 @@ erlgame_db_insert_read(_Config) ->
 
   %% Create users
   lists:foreach(
-    fun( {UserId, _Points} )->
-      ?assertEqual( {ok, 0}, erlgame_db:get_user_points(UserId) )
+    fun( {UserId, Game, _Points} )->
+      ?assertEqual( {ok, 0}, erlgame_db:get_user_points(UserId, Game) )
     end,
     UserList),
 
   %% Add random points
   lists:foreach(
-    fun( {UserId, Points} )->
-      ?assertEqual( ok, erlgame_db:add_user_points(UserId, Points) )
+    fun( {UserId, Game, Points} )->
+      ?assertEqual( ok, erlgame_db:add_user_points(UserId, Game, Points) )
     end,
     UserList),
   
@@ -141,8 +142,8 @@ erlgame_db_insert_read(_Config) ->
 
   %% Check current values
   lists:foreach(
-    fun( {UserId, Points} )->
-      ?assertEqual( {ok, Points}, erlgame_db:get_user_points(UserId) )
+    fun( {UserId, Game, Points} )->
+      ?assertEqual( {ok, Points}, erlgame_db:get_user_points(UserId, Game) )
     end,
     UserList),
 

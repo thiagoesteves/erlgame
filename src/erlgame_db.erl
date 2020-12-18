@@ -10,6 +10,8 @@
 
 -author('Thiago Esteves').
 
+-behaviour(gen_server).
+
 %%%===================================================================
 %%% Includes
 %%%===================================================================
@@ -33,8 +35,8 @@
          code_change/3]).
 
 %% external api
--export([get_user_points/1,
-         add_user_points/2]).
+-export([get_user_points/2,
+         add_user_points/3]).
 
 %%%===================================================================
 %%% Local Defines
@@ -44,7 +46,7 @@
 -define(USER_POINTS, user_points).
 
 %% Key value store for the user points
--define(DB_KVS(Id, Points), { Id, {Points} }).
+-define(DB_KVS(Id, Game, Points), { {Id, Game}, Points }).
 
 %%%===================================================================
 %%% API
@@ -65,12 +67,12 @@ init([]) ->
   ets:new(?USER_POINTS, [set, named_table]),
   {ok, [] }.
 
-handle_call( { get_user_points, UserId } , _From, State) ->
-  Res = get_user_points_priv(UserId),
+handle_call( { get_user_points, UserId, Game } , _From, State) ->
+  Res = get_user_points_priv(UserId, Game),
   {reply, Res, State}.
 
-handle_cast( { add_user_points, UserId, Points }, State) ->
-  add_user_points_priv(UserId, Points),
+handle_cast( { add_user_points, UserId, Game, Points }, State) ->
+  add_user_points_priv(UserId, Game, Points),
   {noreply, State}.
 
 handle_info(_Msg, State) ->
@@ -92,38 +94,41 @@ code_change(_OldVsn, State, _Extra) ->
 %%      user. If the user doesn't exist, it will be created.
 %%
 %% @param UserId User ID name 
+%% @param Game Game name 
 %% @end
 %%--------------------------------------------------------------------
--spec get_user_points(UserId :: atom()) -> {ok | error, integer() }.
-get_user_points(UserId) when is_atom(UserId) ->
-  gen_server:call(?MODULE, { get_user_points, UserId } ).
+-spec get_user_points(UserId :: atom(), Game :: atom()) -> {ok | error, integer() }.
+get_user_points(UserId, Game) when is_atom(UserId), is_atom(Game) ->
+  gen_server:call(?MODULE, { get_user_points, UserId, Game } ).
 
 %%--------------------------------------------------------------------
 %% @doc This function adds points to the respective user
 %%
 %% @param UserId User ID name 
+%% @param Game Game name 
 %% @param Points Number of points to be added
 %% @end
 %%--------------------------------------------------------------------
--spec add_user_points(UserId :: atom(), Points :: integer() ) -> ok.
-add_user_points(UserId, Points) when is_atom(UserId), is_integer(Points) ->
-  gen_server:cast(?MODULE, { add_user_points, UserId, Points } ).
+-spec add_user_points(UserId :: atom(), Game :: atom(), Points :: integer() ) -> ok.
+add_user_points(UserId, Game, Points) 
+  when is_atom(UserId), is_atom(Game), is_integer(Points) ->
+  gen_server:cast(?MODULE, { add_user_points, UserId, Game, Points } ).
 
 %%====================================================================
 %% Internal functions
 %%====================================================================
 
--spec get_user_points_priv(UserId :: atom()) -> {ok, integer() }.
-get_user_points_priv(UserId) ->
+-spec get_user_points_priv(UserId :: atom(), Game :: atom()) -> {ok, integer() }.
+get_user_points_priv(UserId, Game) ->
   %% Check the user exist, if not, create one
-  case ets:lookup(?USER_POINTS, UserId) of
-    [?DB_KVS(UserId, Points)] -> {ok, Points};
-    [] -> ets:insert(?USER_POINTS, ?DB_KVS(UserId, 0)),
+  case ets:lookup(?USER_POINTS, {UserId, Game}) of
+    [?DB_KVS(UserId, Game, Points)] -> {ok, Points};
+    [] -> ets:insert(?USER_POINTS, ?DB_KVS(UserId, Game, 0)),
           {ok, 0}
   end.
 
--spec add_user_points_priv(UserId :: atom(), Points :: integer() ) -> true.
-add_user_points_priv(UserId, Points) ->
+-spec add_user_points_priv(UserId :: atom(), Game :: atom(), Points :: integer() ) -> true.
+add_user_points_priv(UserId, Game, Points) ->
   %% Retrieve current number of points
-  [?DB_KVS(UserId, CurrentPoints)] = ets:lookup(?USER_POINTS, UserId),
-  ets:insert(?USER_POINTS, ?DB_KVS(UserId, CurrentPoints+Points)).
+  [?DB_KVS(UserId, Game, CurrentPoints)] = ets:lookup(?USER_POINTS, {UserId, Game}),
+  ets:insert(?USER_POINTS, ?DB_KVS(UserId, Game, CurrentPoints+Points)).
