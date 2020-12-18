@@ -38,7 +38,9 @@
 
 %% Public API
 -export([start_link/0,
-         start_link/1]).
+         start_link/1,
+         join_game/1,
+         start_game/0]).
 
 %%%===================================================================
 %%% Local Defines
@@ -77,7 +79,9 @@ init(Matrix) ->
   logger:set_module_level(?MODULE, debug),
   %% Create a cashed table and the database table
   ets:new(?GAME_INFO, [set, named_table]),
-  GenStatemData = #{ matrix => Matrix },
+  GenStatemData = #{ matrix => Matrix,
+                     user   => undefined,
+                     points => undefined },
   {ok, join, GenStatemData}.
 
 %% @private
@@ -101,9 +105,24 @@ join(enter, _OldState, GenStatemData) ->
   ?LOG_DEBUG("join - enter state"),
   {keep_state, GenStatemData};
 
-join(cast, _MSG, GenStatemData) ->
-  ?LOG_DEBUG("join - Action"),
-  {keep_state, GenStatemData};
+join({call,From}, { add_user, UserId }, GenStatemData = #{ user := U }) ->
+  case U of
+    undefined -> ?LOG_DEBUG("Adding new player: ~p", [UserId]);
+    UserId    -> ?LOG_DEBUG("Player already in the game: ~p", [UserId]);
+            _ -> ?LOG_DEBUG("Exchanging, leaving: ~p and enters: ~p", [U,UserId])
+  end,
+  %% Capture information from database
+  {ok, Points} = erlgame_db:get_user_points(UserId, ?MODULE),
+  {keep_state, GenStatemData#{user => UserId, points => Points}, 
+   [{reply,From,{ok, {UserId, Points}}}]};
+
+join({call,From}, { start_game }, _GenStatemData = #{ user := undefined }) ->
+  ?LOG_WARNING("You need a player to start the game"),
+  {keep_state_and_data, [{reply,From,{error, no_player}}]};
+
+join({call,From}, { start_game }, GenStatemData) ->
+  ?LOG_INFO("Starting Game"),
+  {next_state, play, GenStatemData, [{reply,From,{ok, 0}}]};
 
 ?HANDLE_COMMON.
 
@@ -142,6 +161,38 @@ handle_common(Type, Msg, _, _GenStatemData) ->
   ?LOG_DEBUG("Unexpected message from ~p MSG: ~p", [Type, Msg]),
   keep_state_and_data.
 
+%%%===================================================================
+%%% Public functions
+%%%===================================================================
+%%--------------------------------------------------------------------
+%% @doc This function adds a user to the game. For this game, only one
+%%      user is allowed
+%%
+%% @param UserId User ID name 
+%% @end
+%%--------------------------------------------------------------------
+-spec join_game(UserId :: list()) -> {ok | error, integer() }.
+join_game(UserId) when is_list(UserId) ->
+  gen_statem:call(?MODULE, {add_user, maybe_string_to_atom(UserId)}).
+
+%%--------------------------------------------------------------------
+%% @doc This function starts the game
+%%
+%% @param UserId User ID name 
+%% @end
+%%--------------------------------------------------------------------
+-spec start_game() -> {ok | error, integer() }.
+start_game() ->
+  gen_statem:call(?MODULE, {start_game}).
+
 %%====================================================================
 %% Internal functions
 %%====================================================================
+
+-spec maybe_string_to_atom(Str :: list()) -> atom().
+maybe_string_to_atom(Str) when is_list(Str) ->
+  try 
+    erlang:list_to_existing_atom(Str)
+  catch
+    _:_ -> erlang:list_to_atom(Str)
+  end.
