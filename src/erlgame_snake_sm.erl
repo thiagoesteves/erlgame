@@ -89,9 +89,10 @@ init([Matrix, LoopTime]) ->
   GenStatemData = #{ matrix      => Matrix,
                      user        => undefined,
                      points      => undefined,
-                     position    => {1,1},
+                     snake_pos   => [{1,1}],
                      last_action => idle,
-                     loop_time   => LoopTime },
+                     loop_time   => LoopTime,
+                     potion      => {0,0} },
   {ok, join, GenStatemData}.
 
 %% @private
@@ -137,11 +138,15 @@ join({call,From}, { start_game }, GenStatemData) ->
 ?HANDLE_COMMON.
 
 %%% JOIN STATE ================================================================
-play(enter, _OldState, GenStatemData = #{ loop_time := LoopTime }) ->
+play(enter, _OldState, GenStatemData = #{ matrix    := {MaxX,MaxY},
+                                          loop_time := LoopTime,
+                                          snake_pos := SnakePosition }) ->
   ?LOG_DEBUG("Play - enter state"),
+  %% Create first increasing potion for the snake
+  Potion = position_potion(MaxX, MaxY, SnakePosition),
   %% Start the loop control, which will check and play with the user
   erlang:send_after(LoopTime, self(), ?LOOP_MSG),
-  {keep_state, GenStatemData};
+  {keep_state, GenStatemData#{ potion => Potion }};
 
 play(cast, {action, UserId, Action}, GenStatemData = #{user := UserId}) ->
   ?LOG_DEBUG("Moving the User"),
@@ -221,6 +226,27 @@ action(UserId, Action) when is_list(UserId), is_atom(Action) ->
 %%====================================================================
 
 %%--------------------------------------------------------------------
+%% @doc This function returns an available position to put the potion
+%%
+%% @param MaxX Maximum X value
+%% @param MaxY Maximum Y value
+%% @param SnakePosition Invalid positions
+%% @end
+%%--------------------------------------------------------------------
+-spec position_potion(MaxX :: integer(), MaxY :: integer(), 
+                  SnakePosition :: list() ) -> {integer(), integer()}.
+position_potion(MaxX, MaxY, SnakePosition) ->
+  {X,Y} = rand_potion(MaxX, MaxY),
+  case lists:member({X,Y}, SnakePosition) of
+    false -> {X,Y};
+    true  -> position_potion(MaxX, MaxY, SnakePosition)
+  end.
+
+-spec rand_potion(MaxX :: integer(), MaxY :: integer()) -> {integer(), integer()}.
+rand_potion(MaxX, MaxY) ->
+  { rand:uniform(MaxX+1) - 1, rand:uniform(MaxY+1) - 1 }.
+
+%%--------------------------------------------------------------------
 %% @doc Update user action and check points
 %%
 %% @param S Module state
@@ -230,25 +256,29 @@ action(UserId, Action) when is_list(UserId), is_atom(Action) ->
 update_user_actions(S = #{ last_action := idle }) ->
   ?LOG_DEBUG("User didn't make the first move"),
   {keep_state,S};
-update_user_actions(S = #{ matrix := {MaxX,_}, position := {MaxX,_},
+update_user_actions(S = #{ matrix := {MaxX,_}, snake_pos := [{MaxX,_}|_],
                        last_action := ?MOVE_RIGHT}) ->
   {end_game,S};
-update_user_actions(S = #{ position := {0,_}, last_action := ?MOVE_LEFT}) ->
+update_user_actions(S = #{ snake_pos := [{0,_}|_], last_action := ?MOVE_LEFT}) ->
   {end_game,S};
-update_user_actions(S = #{ matrix := {_,MaxY}, position := {_,MaxY},
+update_user_actions(S = #{ matrix := {_,MaxY}, snake_pos := [{_,MaxY}|_],
                        last_action := ?MOVE_UP}) ->
   {end_game,S};
-update_user_actions(S = #{ position := {_,0}, last_action := ?MOVE_DOWN}) ->
+update_user_actions(S = #{ snake_pos := [{_,0}|_], last_action := ?MOVE_DOWN}) ->
   {end_game,S};
-update_user_actions(S = #{ user := _User, points := _Points, position := {Px,Py},
-                           last_action := ?MOVE_UP}) ->
-  {keep_state,S#{position := {Px,Py+1}}};
-update_user_actions(S = #{ user := _User, points := _Points, position := {Px,Py},
-                           last_action := ?MOVE_DOWN}) ->
-  {keep_state,S#{position := {Px,Py-1}}};
-update_user_actions(S = #{ user := _User, points := _Points, position := {Px,Py},
-                           last_action := ?MOVE_RIGHT}) ->
-  {keep_state,S#{position := {Px+1,Py}}};
-update_user_actions(S = #{ user := _User, points := _Points, position := {Px,Py},
-                           last_action := ?MOVE_LEFT}) ->
-  {keep_state,S#{position := {Px-1,Py}}}.
+update_user_actions(S = #{ user := _User, points := _Points, snake_pos := [{Px,Py}|Tail],
+                           potion := Potion, last_action := ?MOVE_UP}) ->
+  erlgame_util:print_game(19,19,Px,Py+1,Potion),
+  {keep_state,S#{snake_pos := [{Px,Py+1}|Tail]}};
+update_user_actions(S = #{ user := _User, points := _Points, snake_pos := [{Px,Py}|Tail],
+                           potion := Potion, last_action := ?MOVE_DOWN}) ->
+  erlgame_util:print_game(19,19,Px,Py-1,Potion),
+  {keep_state,S#{snake_pos := [{Px,Py-1}|Tail]}};
+update_user_actions(S = #{ user := _User, points := _Points, snake_pos := [{Px,Py}|Tail],
+                           potion := Potion, last_action := ?MOVE_RIGHT}) ->
+  erlgame_util:print_game(19,19,Px+1,Py,Potion),
+  {keep_state,S#{snake_pos := [{Px+1,Py}|Tail]}};
+update_user_actions(S = #{ user := _User, points := _Points, snake_pos := [{Px,Py}|Tail],
+                           potion := Potion, last_action := ?MOVE_LEFT}) ->
+  erlgame_util:print_game(19,19,Px-1,Py,Potion),
+  {keep_state,S#{snake_pos := [{Px-1,Py}|Tail]}}.
