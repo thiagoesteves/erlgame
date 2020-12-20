@@ -89,7 +89,7 @@ init([Matrix, LoopTime]) ->
   GenStatemData = #{ matrix      => Matrix,
                      user        => undefined,
                      points      => undefined,
-                     snake_pos   => [{3,5}, {3,4}, {3,3}, {3,2}],
+                     snake_pos   => [{3,9}, {3,8}, {3,7}, {3,6}, {3,5}, {3,4}, {3,3}, {3,2}, {3,1}],
                      last_action => idle,
                      loop_time   => LoopTime,
                      potion      => {0,0} },
@@ -148,17 +148,21 @@ play(enter, _OldState, GenStatemData = #{ matrix    := {MaxX,MaxY},
   erlang:send_after(LoopTime, self(), ?LOOP_MSG),
   {keep_state, GenStatemData#{ potion => Potion }};
 
-% Reject reverse movements
-play(cast, {action, _UserId, ?MOVE_UP}, GenStatemData = #{last_action := ?MOVE_DOWN}) ->
+% Reject reverse movements for snake greater than 1
+play(cast, {action, _UserId, ?MOVE_UP}, GenStatemData = #{last_action := ?MOVE_DOWN,
+                                                          snake_pos := [_,_|_] }) ->
   ?LOG_DEBUG("Reverse moviment is not allowed"),
   {keep_state, GenStatemData};
-play(cast, {action, _UserId, ?MOVE_DOWN}, GenStatemData = #{last_action := ?MOVE_UP}) ->
+play(cast, {action, _UserId, ?MOVE_DOWN}, GenStatemData = #{last_action := ?MOVE_UP,
+                                                            snake_pos := [_,_|_]}) ->
   ?LOG_DEBUG("Reverse moviment is not allowed"),
   {keep_state, GenStatemData};
-play(cast, {action, _UserId, ?MOVE_RIGHT}, GenStatemData = #{last_action := ?MOVE_LEFT}) ->
+play(cast, {action, _UserId, ?MOVE_RIGHT}, GenStatemData = #{last_action := ?MOVE_LEFT,
+                                                             snake_pos := [_,_|_]}) ->
   ?LOG_DEBUG("Reverse moviment is not allowed"),
   {keep_state, GenStatemData};
-play(cast, {action, _UserId, ?MOVE_LEFT}, GenStatemData = #{last_action := ?MOVE_RIGHT}) ->
+play(cast, {action, _UserId, ?MOVE_LEFT}, GenStatemData = #{last_action := ?MOVE_RIGHT,
+                                                             snake_pos := [_,_|_]}) ->
   ?LOG_DEBUG("Reverse moviment is not allowed"),
   {keep_state, GenStatemData};
 %% Update new action
@@ -166,7 +170,7 @@ play(cast, {action, UserId, Action}, GenStatemData = #{user := UserId}) ->
   ?LOG_DEBUG("Moving the User"),
   {keep_state, GenStatemData#{ last_action := Action }};
 
-% Reject reverse movements
+% Execute loop update
 play(info, loop_control, GenStatemData = #{ loop_time := LoopTime }) ->
   ?LOG_DEBUG("Play - Action"),
   case update_user_actions(GenStatemData) of
@@ -281,23 +285,33 @@ update_user_actions(S = #{ matrix := {_,MaxY}, snake_pos := [{_,MaxY}|_],
   {end_game,S};
 update_user_actions(S = #{ snake_pos := [{_,0}|_], last_action := ?MOVE_DOWN}) ->
   {end_game,S};
-update_user_actions(S = #{ user := _User, points := _Points, snake_pos := [{Px,Py}|Tail],
-                           potion := Potion, last_action := ?MOVE_UP}) ->
-  NewSnakePosition = [{Px,Py+1} , {Px,Py} | lists:droplast(Tail)],
+update_user_actions(S = #{ user := _User, points := _Points, snake_pos := SnakePosition,
+                           potion := Potion, last_action := Action}) ->
+  %% Move Snake
+  NewSnakePosition = move_snake(SnakePosition, new_head_position(SnakePosition, Action)),
+  %% Check snake not overlapping
+  GameState = check_snake_knot(NewSnakePosition),
   erlgame_util:print_game(19,19,NewSnakePosition,Potion),
-  {keep_state,S#{snake_pos := NewSnakePosition}};
-update_user_actions(S = #{ user := _User, points := _Points, snake_pos := [{Px,Py}|Tail],
-                           potion := Potion, last_action := ?MOVE_DOWN}) ->
-  NewSnakePosition = [{Px,Py-1} , {Px,Py} | lists:droplast(Tail)],
-  erlgame_util:print_game(19,19,NewSnakePosition,Potion),
-  {keep_state,S#{snake_pos := NewSnakePosition}};
-update_user_actions(S = #{ user := _User, points := _Points, snake_pos := [{Px,Py}|Tail],
-                           potion := Potion, last_action := ?MOVE_RIGHT}) ->
-  NewSnakePosition = [{Px+1,Py} , {Px,Py} | lists:droplast(Tail)],
-  erlgame_util:print_game(19,19,NewSnakePosition,Potion),
-  {keep_state,S#{snake_pos := NewSnakePosition}};
-update_user_actions(S = #{ user := _User, points := _Points, snake_pos := [{Px,Py}|Tail],
-                           potion := Potion, last_action := ?MOVE_LEFT}) ->
-  NewSnakePosition = [{Px-1,Py} , {Px,Py} | lists:droplast(Tail)],
-  erlgame_util:print_game(19,19,NewSnakePosition,Potion),
-  {keep_state,S#{snake_pos := NewSnakePosition}}.
+  {GameState,S#{snake_pos := NewSnakePosition}}.
+
+move_snake([ {_,_} | [] ], NewPosition) ->
+  [NewPosition];
+move_snake([{Px,Py} | Tail], NewPosition) ->
+  [NewPosition, {Px,Py} | lists:droplast(Tail)].
+
+new_head_position([{X,Y}|_],?MOVE_UP) ->
+  {X,Y+1};
+new_head_position([{X,Y}|_],?MOVE_DOWN) ->
+  {X,Y-1};
+new_head_position([{X,Y}|_],?MOVE_RIGHT) ->
+  {X+1,Y};
+new_head_position([{X,Y}|_],?MOVE_LEFT) ->
+  {X-1,Y}.
+
+check_snake_knot([Head, _, _, _ | Tail]) ->
+  case lists:member(Head, Tail) of
+    true ->  end_game;
+    false -> keep_state
+  end;
+check_snake_knot(_) ->
+  keep_state.
