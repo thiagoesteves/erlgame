@@ -62,6 +62,7 @@
   ?FUNCTION_NAME(T, C, D) -> handle_common(T, C, ?FUNCTION_NAME, D)).
 
 -type snake_sm_states() :: join | play | game_over.
+-type xy_position() :: {integer(), integer()}.
 
 %%%===================================================================
 %%% API
@@ -89,7 +90,7 @@ init([Matrix, LoopTime]) ->
   GenStatemData = #{ matrix      => Matrix,
                      user        => undefined,
                      points      => undefined,
-                     snake_pos   => [{3,9}, {3,8}, {3,7}, {3,6}, {3,5}, {3,4}, {3,3}, {3,2}, {3,1}],
+                     snake_pos   => [{3,3}, {3,2}, {3,1}],
                      last_action => idle,
                      loop_time   => LoopTime,
                      food        => {0,0} },
@@ -253,7 +254,7 @@ action(UserId, Action) when is_list(UserId), is_atom(Action) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec food_position(MaxX :: integer(), MaxY :: integer(), 
-                    SnakePosition :: list() ) -> {integer(), integer()}.
+                    SnakePosition :: list() ) -> xy_position().
 food_position(MaxX, MaxY, SnakePosition) ->
   {X,Y} = rand_food(MaxX, MaxY),
   case lists:member({X,Y}, SnakePosition) of
@@ -261,7 +262,7 @@ food_position(MaxX, MaxY, SnakePosition) ->
     true  -> food_position(MaxX, MaxY, SnakePosition)
   end.
 
--spec rand_food(MaxX :: integer(), MaxY :: integer()) -> {integer(), integer()}.
+-spec rand_food(MaxX :: integer(), MaxY :: integer()) -> xy_position().
 rand_food(MaxX, MaxY) ->
   { rand:uniform(MaxX+1) - 1, rand:uniform(MaxY+1) - 1 }.
 
@@ -285,27 +286,35 @@ update_user_actions(S = #{ matrix := {_,MaxY}, snake_pos := [{_,MaxY}|_],
   {end_game,S};
 update_user_actions(S = #{ snake_pos := [{_,0}|_], last_action := ?MOVE_DOWN}) ->
   {end_game,S};
-update_user_actions(S = #{ user := _User, points := _Points, snake_pos := SnakePosition,
-                           food := Food, last_action := Action}) ->
+update_user_actions(S = #{ matrix := {MaxX,MaxY}, user := _User, points := _Points, 
+                           snake_pos := SnakePosition,food := Food, last_action := Action}) ->
   %% Move Snake
-  NewSnakePosition = move_snake(SnakePosition, new_head_position(SnakePosition, Action)),
+  NewSnakePosition = move_snake(SnakePosition, new_head_position(SnakePosition, Action), Food),
   %% Check snake not overlapping
   GameState = check_snake_knot(NewSnakePosition),
-  erlgame_util:print_game(19,19,NewSnakePosition,Food),
-  {GameState,S#{snake_pos := NewSnakePosition}}.
+  %% Check New if new food is needed
+  NewFood = check_food_was_eaten(MaxX,MaxY,NewSnakePosition, Food),
+  erlgame_util:print_game(MaxX,MaxY,NewSnakePosition,Food),
+  {GameState,S#{snake_pos := NewSnakePosition, food => NewFood}}.
 
 %%--------------------------------------------------------------------
 %% @doc This function moves the whole sneak based on the new head
-%%      head position
+%%      head position and check against the food. If the food is 
+%%      in the same position of the head, it increments snake size.
 %%
 %% @param Current snake position
 %% @param NewPosition New head position
+%% @param NewPosition Food Position
 %% @end
 %%--------------------------------------------------------------------
--spec move_snake(list(), { integer(), integer() })-> list().
-move_snake([ {_,_} | [] ], NewPosition) ->
+-spec move_snake(list(), xy_position(), xy_position())-> list().
+move_snake([ Head | [] ], NewPosition, NewPosition) ->
+  [NewPosition, Head];
+move_snake([ {_,_} | [] ], NewPosition, _) ->
   [NewPosition];
-move_snake([{Px,Py} | Tail], NewPosition) ->
+move_snake([{Px,Py} | Tail], NewPosition, NewPosition) ->
+  [NewPosition, {Px,Py} | Tail];
+move_snake([{Px,Py} | Tail], NewPosition, _) ->
   [NewPosition, {Px,Py} | lists:droplast(Tail)].
 
 %%--------------------------------------------------------------------
@@ -315,7 +324,7 @@ move_snake([{Px,Py} | Tail], NewPosition) ->
 %% @param Move Moviment to be applied to the head
 %% @end
 %%--------------------------------------------------------------------
--spec new_head_position(list(), move())-> {integer() , integer()}.
+-spec new_head_position(list(), move())-> xy_position().
 new_head_position([{X,Y}|_],?MOVE_UP) ->
   {X,Y+1};
 new_head_position([{X,Y}|_],?MOVE_DOWN) ->
@@ -324,6 +333,21 @@ new_head_position([{X,Y}|_],?MOVE_RIGHT) ->
   {X+1,Y};
 new_head_position([{X,Y}|_],?MOVE_LEFT) ->
   {X-1,Y}.
+
+%%--------------------------------------------------------------------
+%% @doc This function moves the whole sneak based on the new head
+%%      head position and check against the food. If the food is 
+%%      in the same position of the head, it increments snake size.
+%%
+%% @param Current snake position
+%% @param NewPosition New head position
+%% @param NewPosition Food Position
+%% @end
+%%--------------------------------------------------------------------
+check_food_was_eaten(MaxX,MaxY,[Head|_] = SnakePosition, Head) ->
+  food_position(MaxX,MaxY,SnakePosition);
+check_food_was_eaten(_,_,_,Food) ->
+  Food.
 
 %%--------------------------------------------------------------------
 %% @doc This function checks if the snake has overlapped
