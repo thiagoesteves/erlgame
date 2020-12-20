@@ -53,10 +53,10 @@ maybe_string_to_atom(Str) when is_list(Str) ->
 %% @param MaxY Maximum Y position
 %% @param Px Current X position
 %% @param Py Current Y position
-%% @param Potion Potion position
+%% @param FoodPosition Food position
 %% @end
 %%--------------------------------------------------------------------
-print_game(MaxX,MaxY,SnakePosition,PotionPosition) ->
+print_game(MaxX,MaxY,SnakePosition,FoodPosition) ->
   io:format("\ec~n"),
   lists:foreach(
     fun(Y) ->
@@ -66,7 +66,7 @@ print_game(MaxX,MaxY,SnakePosition,PotionPosition) ->
             Snake = lists:member({X,Y}, SnakePosition),
             case {{X,Y}, Snake} of
               {_,true} -> io:format("X");
-              {PotionPosition,_} -> io:format("O");
+              {FoodPosition,_} -> io:format("O");
               _-> io:format(" ")
             end
           end,

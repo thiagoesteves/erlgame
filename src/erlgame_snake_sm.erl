@@ -92,7 +92,7 @@ init([Matrix, LoopTime]) ->
                      snake_pos   => [{3,9}, {3,8}, {3,7}, {3,6}, {3,5}, {3,4}, {3,3}, {3,2}, {3,1}],
                      last_action => idle,
                      loop_time   => LoopTime,
-                     potion      => {0,0} },
+                     food        => {0,0} },
   {ok, join, GenStatemData}.
 
 %% @private
@@ -142,11 +142,11 @@ play(enter, _OldState, GenStatemData = #{ matrix    := {MaxX,MaxY},
                                           loop_time := LoopTime,
                                           snake_pos := SnakePosition }) ->
   ?LOG_DEBUG("Play - enter state"),
-  %% Create first increasing potion for the snake
-  Potion = position_potion(MaxX, MaxY, SnakePosition),
+  %% Create food for the snake
+  Food = food_position(MaxX, MaxY, SnakePosition),
   %% Start the loop control, which will check and play with the user
   erlang:send_after(LoopTime, self(), ?LOOP_MSG),
-  {keep_state, GenStatemData#{ potion => Potion }};
+  {keep_state, GenStatemData#{ food => Food }};
 
 % Reject reverse movements for snake greater than 1
 play(cast, {action, _UserId, ?MOVE_UP}, GenStatemData = #{last_action := ?MOVE_DOWN,
@@ -245,24 +245,24 @@ action(UserId, Action) when is_list(UserId), is_atom(Action) ->
 %%====================================================================
 
 %%--------------------------------------------------------------------
-%% @doc This function returns an available position to put the potion
+%% @doc This function returns an available position to put the food
 %%
 %% @param MaxX Maximum X value
 %% @param MaxY Maximum Y value
 %% @param SnakePosition Invalid positions
 %% @end
 %%--------------------------------------------------------------------
--spec position_potion(MaxX :: integer(), MaxY :: integer(), 
-                  SnakePosition :: list() ) -> {integer(), integer()}.
-position_potion(MaxX, MaxY, SnakePosition) ->
-  {X,Y} = rand_potion(MaxX, MaxY),
+-spec food_position(MaxX :: integer(), MaxY :: integer(), 
+                    SnakePosition :: list() ) -> {integer(), integer()}.
+food_position(MaxX, MaxY, SnakePosition) ->
+  {X,Y} = rand_food(MaxX, MaxY),
   case lists:member({X,Y}, SnakePosition) of
     false -> {X,Y};
-    true  -> position_potion(MaxX, MaxY, SnakePosition)
+    true  -> food_position(MaxX, MaxY, SnakePosition)
   end.
 
--spec rand_potion(MaxX :: integer(), MaxY :: integer()) -> {integer(), integer()}.
-rand_potion(MaxX, MaxY) ->
+-spec rand_food(MaxX :: integer(), MaxY :: integer()) -> {integer(), integer()}.
+rand_food(MaxX, MaxY) ->
   { rand:uniform(MaxX+1) - 1, rand:uniform(MaxY+1) - 1 }.
 
 %%--------------------------------------------------------------------
@@ -286,19 +286,36 @@ update_user_actions(S = #{ matrix := {_,MaxY}, snake_pos := [{_,MaxY}|_],
 update_user_actions(S = #{ snake_pos := [{_,0}|_], last_action := ?MOVE_DOWN}) ->
   {end_game,S};
 update_user_actions(S = #{ user := _User, points := _Points, snake_pos := SnakePosition,
-                           potion := Potion, last_action := Action}) ->
+                           food := Food, last_action := Action}) ->
   %% Move Snake
   NewSnakePosition = move_snake(SnakePosition, new_head_position(SnakePosition, Action)),
   %% Check snake not overlapping
   GameState = check_snake_knot(NewSnakePosition),
-  erlgame_util:print_game(19,19,NewSnakePosition,Potion),
+  erlgame_util:print_game(19,19,NewSnakePosition,Food),
   {GameState,S#{snake_pos := NewSnakePosition}}.
 
+%%--------------------------------------------------------------------
+%% @doc This function moves the whole sneak based on the new head
+%%      head position
+%%
+%% @param Current snake position
+%% @param NewPosition New head position
+%% @end
+%%--------------------------------------------------------------------
+-spec move_snake(list(), { integer(), integer() })-> list().
 move_snake([ {_,_} | [] ], NewPosition) ->
   [NewPosition];
 move_snake([{Px,Py} | Tail], NewPosition) ->
   [NewPosition, {Px,Py} | lists:droplast(Tail)].
 
+%%--------------------------------------------------------------------
+%% @doc This function moves the Head position based on the action
+%%
+%% @param List Snake position
+%% @param Move Moviment to be applied to the head
+%% @end
+%%--------------------------------------------------------------------
+-spec new_head_position(list(), move())-> {integer() , integer()}.
 new_head_position([{X,Y}|_],?MOVE_UP) ->
   {X,Y+1};
 new_head_position([{X,Y}|_],?MOVE_DOWN) ->
@@ -308,6 +325,13 @@ new_head_position([{X,Y}|_],?MOVE_RIGHT) ->
 new_head_position([{X,Y}|_],?MOVE_LEFT) ->
   {X-1,Y}.
 
+%%--------------------------------------------------------------------
+%% @doc This function checks if the snake has overlapped
+%%
+%% @param List Snake position
+%% @end
+%%--------------------------------------------------------------------
+-spec check_snake_knot(list()) -> end_game | keep_state.
 check_snake_knot([Head, _, _, _ | Tail]) ->
   case lists:member(Head, Tail) of
     true ->  end_game;
