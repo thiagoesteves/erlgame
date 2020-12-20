@@ -22,7 +22,7 @@
 
 %% Public API
 -export([maybe_string_to_atom/1,
-         print_game/5]).
+         print_game/4]).
 
 %%%===================================================================
 %%% Local Defines
@@ -56,18 +56,19 @@ maybe_string_to_atom(Str) when is_list(Str) ->
 %% @param Potion Potion position
 %% @end
 %%--------------------------------------------------------------------
-print_game(MaxX,MaxY,Px,Py,Potion) ->
+print_game(MaxX,MaxY,SnakePosition,PotionPosition) ->
   io:format("\ec~n"),
   lists:foreach(
     fun(Y) ->
       io:format("|"),
       lists:foreach(
           fun(X) ->
-            case {X,Y} of
-              {Px,Py} -> io:format("+");
-              Potion -> io:format("O");
+            Snake = lists:member({X,Y}, SnakePosition),
+            case {{X,Y}, Snake} of
+              {_,true} -> io:format("X");
+              {PotionPosition,_} -> io:format("O");
               _-> io:format(" ")
-              end
+            end
           end,
           lists:seq(0,MaxX)),
       io:format("|~n")
