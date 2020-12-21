@@ -61,7 +61,6 @@
 -define(HANDLE_COMMON,
   ?FUNCTION_NAME(T, C, D) -> handle_common(T, C, ?FUNCTION_NAME, D)).
 
--type snake_sm_states() :: join | play | game_over.
 -type xy_position() :: {integer(), integer()}.
 
 %%%===================================================================
@@ -90,7 +89,7 @@ init([Matrix, LoopTime]) ->
   GenStatemData = #{ matrix      => Matrix,
                      user        => undefined,
                      points      => undefined,
-                     snake_pos   => [{3,3}, {3,2}, {3,1}],
+                     snake_pos   => [{1,1}],
                      last_action => idle,
                      loop_time   => LoopTime,
                      food        => {0,0} },
@@ -187,10 +186,6 @@ play(info, loop_control, GenStatemData = #{ loop_time := LoopTime }) ->
 %%% JOIN STATE ================================================================
 game_over(enter, _OldState, GenStatemData) ->
   ?LOG_DEBUG("Game Over - enter state"),
-  {keep_state, GenStatemData};
-
-game_over(cast, _MSG, GenStatemData) ->
-  ?LOG_DEBUG("Game Over - Action"),
   {keep_state, GenStatemData};
 
 ?HANDLE_COMMON.
