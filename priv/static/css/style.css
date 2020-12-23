@@ -1,0 +1,93 @@
+body {
+	font-family: sans-serif;
+	text-align: center;
+	padding: 3rem;
+	font-size: 1.125rem;
+	line-height: 1.5;
+	transition: all 725ms ease-in-out;
+}
+
+h1 {
+	font-size: 2rem;
+	font-weight: bolder;
+	margin-bottom: 1rem;
+	text-align: center;
+}
+
+p {
+	margin-bottom: 1rem;
+	color: tomato;
+	text-align: left;
+}
+
+* {
+	box-sizing: border-box;
+  }
+
+button {
+	cursor: pointer;
+	appearance: none;
+	border-radius: 4px;
+	font-size: 1.25rem;
+	padding: 0.75rem 1rem;
+	border: 1px solid navy;
+	background-color: dodgerblue;
+	color: white;
+	display: inline-block;
+}
+
+/* Style the header */
+.header {
+	background-color: #f1f1f1;
+	padding: 30px;
+	text-align: center;
+	font-size: 35px;
+}
+  
+/* Create three unequal columns that floats next to each other */
+.column {
+	float: left;
+	padding: 10px;
+	height: 100px;
+}
+
+/* Left and right column */
+.column.side {
+	width: 25%;
+}
+  
+/* Middle column */
+.column.middle {
+	width: 50%;
+}
+  
+/* Clear floats after the columns */
+.row:after {
+	content: "";
+	display: table;
+	clear: both;
+}
+  
+/* Style the footer */
+.footer {
+	background-color: #f1f1f1;
+	padding: 10px;
+	text-align: center;
+}
+
+/* Responsive layout - makes the three columns stack on top of each other instead of next to each other */
+@media (max-width: 600px) {
+	.column.side, .column.middle {
+		width: 100%;
+	}
+}
+
+.scrollabletextbox {
+    height:100px;
+    width:300px;
+    font-family: Verdana, Tahoma, Arial, Helvetica, sans-serif;
+    font-size: 82%;
+	overflow:scroll;
+	border-radius: 4px;
+	background-color: white;
+}

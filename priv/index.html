@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>ErlGame</title>
+    <link rel="stylesheet" href="static/css/style.css">
+</head>
+
+<body>
+    <div class="header">
+      <h1>SNAKE GAME</h1>
+    </div>
+    
+    <div class="row">
+        <div class="column side" style="background-color:#aaa;">My Points</div>
+        <div class="column middle" style="background-color:#bbb;">Arena</div>
+        <div class="column side" style="background-color:#ccc;">
+            Erlang Server Msg
+            <div class="scrollabletextbox" id="output"></div>
+        </div>
+    </div>
+
+    <div class="footer">
+      <p>Footer</p>
+      <input  id="server" type='text' value=""></input>
+      <button id="connect" onclick="connectServer()">Connect</button>
+    </div>
+
+    <script src="static/js/script.js"></script>
+</body>
+</html>
