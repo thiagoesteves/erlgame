@@ -1,93 +1,157 @@
 body {
-	font-family: sans-serif;
-	text-align: center;
-	padding: 3rem;
-	font-size: 1.125rem;
-	line-height: 1.5;
-	transition: all 725ms ease-in-out;
+  font-family: sans-serif;
+  text-align: center;
+  padding: 3rem;
+  font-size: 1.125rem;
+  line-height: 1.5;
+  transition: all 725ms ease-in-out;
 }
 
 h1 {
-	font-size: 2rem;
-	font-weight: bolder;
-	margin-bottom: 1rem;
-	text-align: center;
+  font-size: 2rem;
+  font-weight: bolder;
+  margin-bottom: 1rem;
+  text-align: center;
 }
 
 p {
-	margin-bottom: 1rem;
-	color: tomato;
-	text-align: left;
+  margin-bottom: 1rem;
+  color: black;
+  font-size: 0.8rem;
+  text-align: center;
 }
 
 * {
-	box-sizing: border-box;
-  }
+  box-sizing: border-box;
+}
 
 button {
-	cursor: pointer;
-	appearance: none;
-	border-radius: 4px;
-	font-size: 1.25rem;
-	padding: 0.75rem 1rem;
-	border: 1px solid navy;
-	background-color: dodgerblue;
-	color: white;
-	display: inline-block;
+  cursor: pointer;
+  appearance: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid navy;
+  background-color: dodgerblue;
+  color: white;
+  display: inline-block;
+}
+
+input[type=text] {
+  width: 70%;
+  padding: 1px 1px;
+  margin: 8px 0;
+  box-sizing: border-box;
+  border: 3px solid #ccc;
+  -webkit-transition: 0.5s;
+  transition: 0.5s;
+  outline: none;
+}
+  
+input[type=text]:focus {
+  border: 3px solid #555;
 }
 
 /* Style the header */
 .header {
-	background-color: #f1f1f1;
-	padding: 30px;
-	text-align: center;
-	font-size: 35px;
+  background-color: #f1f1f1;
+  text-align: center;
+  font-size: 5px;
+  border-radius: 2px;
+  border: 2px solid #2c3e50;
 }
   
 /* Create three unequal columns that floats next to each other */
 .column {
-	float: left;
-	padding: 10px;
-	height: 100px;
+  float: left;
+  padding: 10px;
+  height: 620px;
+  border-radius: 4px;
 }
 
 /* Left and right column */
 .column.side {
-	width: 25%;
+  width: 25%;
 }
   
 /* Middle column */
 .column.middle {
-	width: 50%;
+  width: 50%;
 }
   
 /* Clear floats after the columns */
 .row:after {
-	content: "";
-	display: table;
-	clear: both;
+  content: "";
+  display: table;
+  clear: both;
 }
   
 /* Style the footer */
 .footer {
-	background-color: #f1f1f1;
-	padding: 10px;
-	text-align: center;
+  background-color: #f1f1f1;
+  padding: 10px;
+  text-align: center;
 }
 
 /* Responsive layout - makes the three columns stack on top of each other instead of next to each other */
-@media (max-width: 600px) {
-	.column.side, .column.middle {
-		width: 100%;
-	}
+@media (max-width: 900px) {
+  .column.side, .column.middle {
+    width: 100%;
+  }
 }
 
 .scrollabletextbox {
-    height:100px;
-    width:300px;
-    font-family: Verdana, Tahoma, Arial, Helvetica, sans-serif;
-    font-size: 82%;
-	overflow:scroll;
-	border-radius: 4px;
-	background-color: white;
+  height:500px;
+  width:300px;
+  font-family: Verdana, Tahoma, Arial, Helvetica, sans-serif;
+  font-size: 60%;
+  overflow:scroll;
+  border-radius: 2px;
+  border: 2px solid #2c3e50;
+  background-color: white;
+  margin: auto;
+	display: block;
+}
+
+.game {
+  width: 100vw;
+  height: 100vw;
+  margin: 0 auto;
+  background-color: #34495e;
+  color: #fff;
+  display: grid;
+  grid-template: repeat(21, 1fr) / repeat(21, 1fr)
+}
+  
+.game>div {
+  width: 2,5vw;
+  height: 2,5vw;
+  border: 1px solid #2c3e50;
+  font-family: Helvetica;
+  font-weight: bold;
+  font-size: 1em;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+  
+.game > div.winner {
+  background: yellow;
+}
+  
+.game > div.winner > span {
+  color: blue;
+}
+  
+@media (min-width: 600px) {
+  .game {
+    width: 600px;
+    height: 600px;
+    border-radius: 10px;
+    border: 6px solid #2c3e50;
+  }
+  
+  .game>div {
+    border-radius: 2px;
+  }
 }

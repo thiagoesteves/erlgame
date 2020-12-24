@@ -16,6 +16,9 @@
 %% Database Name
 -define(DB_NAME, erlgame_db).
 
+%% Define arena game notification message
+-define(SNAKE_SM_UPDATE_MSG(SnakePosition,Food),  {snake_sm_updated,SnakePosition,Food}).
+
 %% Possible moviments
 -define(MOVE_UP,    up).
 -define(MOVE_DOWN,  down).

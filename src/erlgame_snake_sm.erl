@@ -61,6 +61,9 @@
 -define(HANDLE_COMMON,
   ?FUNCTION_NAME(T, C, D) -> handle_common(T, C, ?FUNCTION_NAME, D)).
 
+%% Gproc groups
+-define(GPROC_PLAYER_GROUP,  {p,l,{?MODULE,notify_on_update}}).
+
 -type xy_position() :: {integer(), integer()}.
 
 %%%===================================================================
@@ -83,7 +86,7 @@ start_link() ->
 
 -spec init(list()) -> {ok, atom(), map()}.
 init([Matrix, LoopTime]) ->
-  logger:set_module_level(?MODULE, debug),
+  logger:set_module_level(?MODULE, error),
   %% Create a cashed table and the database table
   ets:new(?GAME_INFO, [set, named_table]),
   GenStatemData = #{ matrix      => Matrix,
@@ -211,6 +214,7 @@ handle_common(Type, Msg, _, _GenStatemData) ->
 %%--------------------------------------------------------------------
 -spec join_game(UserId :: list()) -> {ok | error, integer() }.
 join_game(UserId) when is_list(UserId) ->
+  gproc:ensure_reg(?GPROC_PLAYER_GROUP),
   gen_statem:call(?MODULE, 
     {add_user, erlgame_util:maybe_string_to_atom(UserId)}).
 
@@ -268,8 +272,10 @@ rand_food(MaxX, MaxY) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec update_user_actions(S :: map()) -> {keep_state | end_game, map()}.
-update_user_actions(S = #{ last_action := idle }) ->
+update_user_actions(S = #{ last_action := idle, snake_pos := SnakePosition,
+                           food := Food}) ->
   ?LOG_DEBUG("User didn't make the first move"),
+  notify_players(SnakePosition, Food),
   {keep_state,S};
 update_user_actions(S = #{ matrix := {MaxX,_}, snake_pos := [{MaxX,_}|_],
                        last_action := ?MOVE_RIGHT}) ->
@@ -289,7 +295,8 @@ update_user_actions(S = #{ matrix := {MaxX,MaxY}, user := _User, points := _Poin
   GameState = check_snake_knot(NewSnakePosition),
   %% Check New if new food is needed
   NewFood = check_food_was_eaten(MaxX,MaxY,NewSnakePosition, Food),
-  erlgame_util:print_game(MaxX,MaxY,NewSnakePosition,Food),
+  %% Notify web players
+  notify_players(NewSnakePosition, Food),
   {GameState,S#{snake_pos := NewSnakePosition, food => NewFood}}.
 
 %%--------------------------------------------------------------------
@@ -358,3 +365,32 @@ check_snake_knot([Head, _, _, _ | Tail]) ->
   end;
 check_snake_knot(_) ->
   keep_state.
+
+%%--------------------------------------------------------------------
+%% @doc Notify subscribed players the game arena was updated
+%%
+%% @param SnakePosition Snake position list
+%% @param Food Food position
+%% @end
+%%--------------------------------------------------------------------
+-spec notify_players(SnakePosition :: list(), Food :: xy_position()) -> ok.
+notify_players(SnakePosition, Food) ->
+  gproc_notify(?GPROC_PLAYER_GROUP, ?SNAKE_SM_UPDATE_MSG(SnakePosition, Food)).
+
+%%--------------------------------------------------------------------
+%% @doc Gproc function to send messages to the respective pid group
+%%
+%% @param Group Gproc group to be notified
+%% @param Msg Message to be sent
+
+%% @end
+%%--------------------------------------------------------------------
+-spec gproc_notify(tuple(), tuple()) -> ok.
+gproc_notify(Group, Msg) ->
+  %% Retrieve Pid List
+  Pids = gproc:lookup_pids(Group),
+  lists:foreach(
+    fun(Pid) ->
+      erlang:send(Pid, Msg)
+    end,
+    Pids).

@@ -12,8 +12,16 @@
     </div>
     
     <div class="row">
-        <div class="column side" style="background-color:#aaa;">My Points</div>
-        <div class="column middle" style="background-color:#bbb;">Arena</div>
+        <div class="column side" style="background-color:#aaa;">
+            <button id="connect" onclick="connectServer()">connect</button>
+            <div></div>
+            <div></div>
+            <input  id="player" type='text' value="Name"></input>
+            <button id="connect" onclick="createGame()" placeholder="Player Name">play</button>
+        </div>
+        <div class="column middle" style="background-color:#bbb;">
+            <div class='game'></div>
+        </div>
         <div class="column side" style="background-color:#ccc;">
             Erlang Server Msg
             <div class="scrollabletextbox" id="output"></div>
@@ -21,9 +29,7 @@
     </div>
 
     <div class="footer">
-      <p>Footer</p>
-      <input  id="server" type='text' value=""></input>
-      <button id="connect" onclick="connectServer()">Connect</button>
+      <p>© 2021 - Thiago Esteves. All rights reserved.</p>
     </div>
 
     <script src="static/js/script.js"></script>

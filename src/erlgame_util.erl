@@ -21,8 +21,7 @@
 %%%===================================================================
 
 %% Public API
--export([maybe_string_to_atom/1,
-         print_game/4]).
+-export([maybe_string_to_atom/1]).
 
 %%%===================================================================
 %%% Local Defines
@@ -45,35 +44,6 @@ maybe_string_to_atom(Str) when is_list(Str) ->
   catch
     _:_ -> erlang:list_to_atom(Str)
   end.
-
-%%--------------------------------------------------------------------
-%% @doc Print the current position in ASCII
-%%
-%% @param MaxX Maximum X position
-%% @param MaxY Maximum Y position
-%% @param Px Current X position
-%% @param Py Current Y position
-%% @param FoodPosition Food position
-%% @end
-%%--------------------------------------------------------------------
-print_game(MaxX,MaxY,SnakePosition,FoodPosition) ->
-  io:format("\ec~n"),
-  lists:foreach(
-    fun(Y) ->
-      io:format("|"),
-      lists:foreach(
-          fun(X) ->
-            Snake = lists:member({X,Y}, SnakePosition),
-            case {{X,Y}, Snake} of
-              {_,true} -> io:format("X");
-              {FoodPosition,_} -> io:format("O");
-              _-> io:format(" ")
-            end
-          end,
-          lists:seq(0,MaxX)),
-      io:format("|~n")
-    end,
-    lists:reverse(lists:seq(0,MaxY)) ).
 
 %%====================================================================
 %% Internal functions
