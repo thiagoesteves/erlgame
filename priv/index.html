@@ -6,18 +6,17 @@
     <link rel="stylesheet" href="static/css/style.css">
 </head>
 
-<body>
+<body onload="connectServer();">
     <div class="header">
       <h1>SNAKE GAME</h1>
     </div>
     
     <div class="row">
         <div class="column side" style="background-color:#aaa;">
-            <button id="connect" onclick="connectServer()">connect</button>
             <div></div>
             <div></div>
-            <input  id="player" type='text' value="Name"></input>
-            <button id="connect" onclick="createGame()" placeholder="Player Name">play</button>
+            <input  id="player" type='text' value="User Name"></input>
+            <button id="play" onclick="createGame()" placeholder="Player Name">play</button>
         </div>
         <div class="column middle" style="background-color:#bbb;">
             <div class='game'></div>
