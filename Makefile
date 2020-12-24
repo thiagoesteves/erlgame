@@ -19,4 +19,4 @@ check:
 	rebar3 as test dialyzer
 	
 coveralls: test
-	rebar3 coveralls send
+	rebar3 as test coveralls send
