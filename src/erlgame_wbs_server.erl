@@ -61,6 +61,10 @@ websocket_info(?SNAKE_SM_UPDATE_MSG(S,{Fx,Fy}), State) ->
     S),
   {[{text,jsone:encode(NewMap)}], State};
 
+websocket_info(?SNAKE_SM_GAME_OVER(_GenStateData), State) ->
+  ?LOG_INFO("~p", ["Game Over"]),
+  {reply, {close, 1000, <<"Game Over">>}, State};
+
 websocket_info(_Info, State) ->
   {[], State}.
 

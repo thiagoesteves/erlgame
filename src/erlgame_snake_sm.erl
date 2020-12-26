@@ -189,9 +189,8 @@ play(info, loop_control, GenStatemData = #{ loop_time := LoopTime }) ->
 %%% JOIN STATE ================================================================
 game_over(enter, _OldState, GenStatemData) ->
   ?LOG_DEBUG("Game Over - enter state"),
-  {keep_state, GenStatemData};
-
-?HANDLE_COMMON.
+  notify_game_over(GenStatemData),
+  {stop, normal, GenStatemData}.
 
 %%% HANDLE COMMON FUNCTION ====================================================
 handle_common(info, _Msg,  State, _GenStatemData) ->
@@ -365,6 +364,17 @@ check_snake_knot([Head, _, _, _ | Tail]) ->
   end;
 check_snake_knot(_) ->
   keep_state.
+
+%%--------------------------------------------------------------------
+%% @doc Notify subscribed players the game is over with last State
+%%
+%% @param GenStatemData Last VAlid State
+%%
+%% @end
+%%--------------------------------------------------------------------
+-spec notify_game_over(GenStatemData :: map()) -> ok.
+notify_game_over(GenStatemData) ->
+  gproc_notify(?GPROC_PLAYER_GROUP, ?SNAKE_SM_GAME_OVER(GenStatemData)).
 
 %%--------------------------------------------------------------------
 %% @doc Notify subscribed players the game arena was updated

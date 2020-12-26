@@ -18,6 +18,7 @@
 
 %% Define arena game notification message
 -define(SNAKE_SM_UPDATE_MSG(SnakePosition,Food),  {snake_sm_updated,SnakePosition,Food}).
+-define(SNAKE_SM_GAME_OVER(State),                {snake_sm_game_over, State}).
 
 %% Possible moviments
 -define(MOVE_UP,    up).

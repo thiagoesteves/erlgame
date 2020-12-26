@@ -319,10 +319,8 @@ erlgame_snake_go_right_ok(_Config) ->
   erlgame_snake_sm:start_game(),
   %% Move
   erlgame_snake_sm:action("Thiago", ?MOVE_RIGHT),
-  %% Wait for the game over state
-  ?assertEqual(ok, wait_game_over()),
-  %% Create the state machine
-  ?assertMatch( {game_over, #{last_action := ?MOVE_RIGHT}}, try_get_state(?SNAKE_GAME) ),
+  %% Wait for the game over state and check the last state
+  ?assertMatch( {game_over, #{last_action := ?MOVE_RIGHT}}, wait_game_over() ),
   ok.
 
 %%%===================================================================
@@ -341,10 +339,8 @@ erlgame_snake_go_left_ok(_Config) ->
   erlgame_snake_sm:start_game(),
   %% Move
   erlgame_snake_sm:action("user", ?MOVE_LEFT),
-  %% Wait for the game over state
-  ?assertEqual(ok, wait_game_over()),
-  %% Create the state machine
-  ?assertMatch( {game_over, #{last_action := ?MOVE_LEFT}}, try_get_state(?SNAKE_GAME) ),
+  %% Wait for the game over state and check the last state
+  ?assertMatch( {game_over, #{last_action := ?MOVE_LEFT}}, wait_game_over() ),
   ok.
 
 %%%===================================================================
@@ -363,10 +359,8 @@ erlgame_snake_go_up_ok(_Config) ->
   erlgame_snake_sm:start_game(),
   %% Move
   erlgame_snake_sm:action("user", ?MOVE_UP),
-  %% Wait for the game over state
-  ?assertEqual(ok, wait_game_over()),
-  %% Create the state machine
-  ?assertMatch( {game_over, #{last_action := ?MOVE_UP}}, try_get_state(?SNAKE_GAME) ),
+  %% Wait for the game over state and check the last state
+  ?assertMatch( {game_over, #{last_action := ?MOVE_UP}}, wait_game_over() ),
   ok.
 
 %%%===================================================================
@@ -385,10 +379,8 @@ erlgame_snake_go_down_ok(_Config) ->
   erlgame_snake_sm:start_game(),
   %% Move
   erlgame_snake_sm:action("user", ?MOVE_DOWN),
-  %% Wait for the game over state
-  ?assertEqual(ok, wait_game_over()),
-  %% Create the state machine
-  ?assertMatch( {game_over, #{last_action := ?MOVE_DOWN}}, try_get_state(?SNAKE_GAME) ),
+  %% Wait for the game over state and check the last state
+  ?assertMatch( {game_over, #{last_action := ?MOVE_DOWN}}, wait_game_over() ),
   ok.
 
 %%%===================================================================
@@ -430,10 +422,8 @@ erlgame_snake_reverse_up_not_allowed_ok(_Config) ->
   erlgame_snake_sm:start_game(),
   erlgame_snake_sm:action("user", ?MOVE_UP),
   erlgame_snake_sm:action("user", ?MOVE_DOWN),
-  %% Wait for the game over state
-  ?assertEqual(ok, wait_game_over()),
-  %% Create the state machine
-  ?assertMatch( {game_over, #{last_action := ?MOVE_UP}}, try_get_state(?SNAKE_GAME) ),
+  %% Wait for the game over state and check the last state
+  ?assertMatch( {game_over, #{last_action := ?MOVE_UP}}, wait_game_over() ),
   ok.
 
 %%%===================================================================
@@ -454,10 +444,8 @@ erlgame_snake_reverse_down_not_allowed_ok(_Config) ->
   erlgame_snake_sm:start_game(),
   erlgame_snake_sm:action("user", ?MOVE_DOWN),
   erlgame_snake_sm:action("user", ?MOVE_UP),
-  %% Wait for the game over state
-  ?assertEqual(ok, wait_game_over()),
-  %% Create the state machine
-  ?assertMatch( {game_over, #{last_action := ?MOVE_DOWN}}, try_get_state(?SNAKE_GAME) ),
+  %% Wait for the game over state and check the last state
+  ?assertMatch( {game_over, #{last_action := ?MOVE_DOWN}}, wait_game_over() ),
   ok.
 
 %%%===================================================================
@@ -478,10 +466,8 @@ erlgame_snake_reverse_right_not_allowed_ok(_Config) ->
   erlgame_snake_sm:start_game(),
   erlgame_snake_sm:action("user", ?MOVE_RIGHT),
   erlgame_snake_sm:action("user", ?MOVE_LEFT),
-  %% Wait for the game over state
-  ?assertEqual(ok, wait_game_over()),
-  %% Create the state machine
-  ?assertMatch( {game_over, #{last_action := ?MOVE_RIGHT}}, try_get_state(?SNAKE_GAME) ),
+  %% Wait for the game over state and check the last state
+  ?assertMatch( {game_over, #{last_action := ?MOVE_RIGHT}}, wait_game_over() ),
   ok.
 
 %%%===================================================================
@@ -501,10 +487,8 @@ erlgame_snake_knot_game_over_ok(_Config) ->
   %% Start Game
   erlgame_snake_sm:start_game(),
   erlgame_snake_sm:action("user", ?MOVE_RIGHT),
-  %% Wait for the game over state
-  ?assertEqual(ok, wait_game_over()),
-  %% Create the state machine
-  ?assertMatch( {game_over, #{last_action := ?MOVE_RIGHT}}, try_get_state(?SNAKE_GAME) ),
+  %% Wait for the game over state and check the last state
+  ?assertMatch( {game_over, #{last_action := ?MOVE_RIGHT}}, wait_game_over() ),
   ok.
 
 %%%===================================================================
@@ -525,10 +509,8 @@ erlgame_snake_reverse_left_not_allowed_ok(_Config) ->
   erlgame_snake_sm:start_game(),
   erlgame_snake_sm:action("user", ?MOVE_LEFT),
   erlgame_snake_sm:action("user", ?MOVE_RIGHT),
-  %% Wait for the game over state
-  ?assertEqual(ok, wait_game_over()),
-  %% Create the state machine
-  ?assertMatch( {game_over, #{last_action := ?MOVE_LEFT}}, try_get_state(?SNAKE_GAME) ),
+  %% Wait for the game over state and check the last state
+  ?assertMatch( {game_over, #{last_action := ?MOVE_LEFT}}, wait_game_over() ),
   ok.
 
 %%%===================================================================
@@ -556,8 +538,7 @@ erlgame_snake_full_coverage_ok(_Config) ->
 
   %% Wait for the game over state
   erlgame_snake_sm:action("user", ?MOVE_RIGHT),
-  ?assertEqual(ok, wait_game_over()),
-  erlang:send(?SNAKE_GAME, {none}),
+  ?assertMatch({game_over, _}, wait_game_over()),
   ok.
 
 %%%===================================================================
@@ -634,15 +615,11 @@ change_snake_position(Position) ->
 %% @param Timeout Maximum timeout to wait
 %% @end
 %%--------------------------------------------------------------------
-wait_game_over(Timeout) when Timeout =<0 ->
-  error;
 wait_game_over(Timeout) ->
-  %% Get Snake State
-  {State, _ } = try_get_state(?SNAKE_GAME),
-  case State of
-    game_over -> ok;
-    _ -> timer:sleep(1),
-         wait_game_over(Timeout -1)
+  receive
+    ?SNAKE_SM_GAME_OVER(State) -> {game_over, State}
+  after
+    Timeout -> error
   end.
 
 wait_game_over() ->

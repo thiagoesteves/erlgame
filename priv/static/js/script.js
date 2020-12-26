@@ -52,16 +52,23 @@ function updateBoard(json_from_erlang) {
 
 function onOpen(evt) {
   showScreen('<span style="color: green;">CONNECTED</span>');
-  // createGame("Thiago");
 };
 
 function onClose(evt) {
-	showScreen('<span style="color: red;">DISCONNECTED</span>');
+  showScreen('<span style="color: red;"> Disconnected by '+ evt.reason +'</span>');
 };
 
 function onMessage(evt) {
   showScreen('<span style="color: blue;">' + evt.data + '</span>');
-  updateBoard(evt.data);
+  switch (evt.data) {
+    // Snake game
+    case (evt.data.match(/food/) || {}).input:
+      updateBoard(evt.data);
+      break;
+    default:
+      console.log("Didn't match" + evt.data);
+      break;
+  };
 };
 
 function onError(evt) {
@@ -114,4 +121,26 @@ function sendMsg(msg) {
 	} else {
 		showScreen('websocket is not connected');
 	};
+};
+
+function gameOver() {
+  // console.log(json_from_erlang);
+  var obj = JSON.parse(json_from_erlang);
+  console.log(obj);
+  // Parse Snake position
+  snake_position = Object.entries(obj.snake).map( ([k,v]) => v );
+  var drawning='';
+  for (var row=(arena.row-1); row>=0; row--) {
+    for (var column=0; column<arena.column; column++) {
+      if (obj.food.x === column && obj.food.y === row) {
+        drawning += `<div style="background-color: red;">@</div>`;
+      } else if (snake_position.find(elem => elem.x === column && elem.y === row)) {
+        drawning += `<div style="background-color: lightblue;"> </div>`;
+      } else {
+        drawning += `<div> </div><div> </div><div> </div>`;
+      }
+    }
+  }
+  // Print game board
+  board_game.innerHTML = drawning;
 };
