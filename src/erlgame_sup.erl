@@ -31,7 +31,8 @@
 %% Local Definitions
 %%====================================================================
 
--define(SERVER, ?MODULE).
+-define(SERVER,         ?MODULE).
+-define(SNAKE_GAME_SUP, erlgame_snake_sm_sup).
 
 %%====================================================================
 %% API functions implementation
@@ -50,6 +51,12 @@ init([]) ->
                     start => {?DB_NAME, start_link, []},
                     restart => permanent,
                     type => worker,
+                    shutdown => brutal_kill},
+
+                  #{id => ?SNAKE_GAME_SUP,
+                    start => {?SNAKE_GAME_SUP, start_link, []},
+                    restart => permanent,
+                    type => supervisor,
                     shutdown => brutal_kill}
                 ],
   {ok, {SupFlags, ChildSpecs}}.

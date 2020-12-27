@@ -37,10 +37,8 @@
          game_over/3]).
 
 %% Public API
--export([start_link/0,
-         start_link/2,
-         join_game/1,
-         start_game/0,
+-export([start_link/4,
+         start_game/1,
          action/2]).
 
 %%%===================================================================
@@ -50,19 +48,15 @@
 %% Default size
 -define(DEFAULT_SIZE, {19,19} ).
 
-%% Local database name
--define(GAME_INFO, snake_db).
-
 %% Loop control info
 -define(LOOP_MSG,  loop_control).
--define(LOOP_TIME, 1000).
 
 %% gen_statem definitions
 -define(HANDLE_COMMON,
   ?FUNCTION_NAME(T, C, D) -> handle_common(T, C, ?FUNCTION_NAME, D)).
 
 %% Gproc groups
--define(GPROC_PLAYER_GROUP,  {p,l,{?MODULE,notify_on_update}}).
+-define(GPROC_PLAYER_GROUP(UserName),  {p,l,{UserName,notify_on_update}}).
 
 -type xy_position() :: {integer(), integer()}.
 
@@ -70,27 +64,27 @@
 %%% API
 %%%===================================================================
 
--spec start_link(Matrix :: tuple(), LoopTime :: integer()) -> 
+-spec start_link(UserName :: string(), UserPid :: pid(),
+                 Matrix :: tuple(), LoopTime :: integer()) -> 
   {ok, pid()} | ignore | {error, term()}.
-start_link(Matrix, LoopTime) when is_tuple(Matrix), 
-                                  is_integer(LoopTime)->
-  gen_statem:start_link({local,?MODULE}, ?MODULE, [Matrix, LoopTime], []).
-
--spec start_link() -> {ok, pid()} | ignore | {error, term()}.
-start_link() ->
-  gen_statem:start_link({local,?MODULE}, ?MODULE, [?DEFAULT_SIZE, ?LOOP_TIME], []).
+start_link(UserName, UserPid, Matrix, LoopTime) when is_list(UserName),
+                                                     is_pid(UserPid),
+                                                     is_tuple(Matrix), 
+                                                     is_integer(LoopTime)->
+  gen_statem:start_link(?MODULE, 
+    [erlgame_util:maybe_string_to_atom(UserName), 
+     UserPid, Matrix, LoopTime], []).
 
 %%%===================================================================
 %%% gen_statem callbacks
 %%%===================================================================
 
 -spec init(list()) -> {ok, atom(), map()}.
-init([Matrix, LoopTime]) ->
+init([UserId, UserPid, Matrix, LoopTime]) ->
   logger:set_module_level(?MODULE, error),
-  %% Create a cashed table and the database table
-  ets:new(?GAME_INFO, [set, named_table]),
   GenStatemData = #{ matrix      => Matrix,
-                     user        => undefined,
+                     user        => UserId,
+                     user_pid    => UserPid,
                      points      => undefined,
                      snake_pos   => [{1,1}],
                      last_action => idle,
@@ -115,24 +109,11 @@ callback_mode() ->
 %%%============================================================================
 
 %%% JOIN STATE ================================================================
-join(enter, _OldState, GenStatemData) ->
+join(enter, _OldState, GenStatemData = #{user := UserId}) ->
   ?LOG_DEBUG("join - enter state"),
-  {keep_state, GenStatemData};
-
-join({call,From}, { add_user, UserId }, GenStatemData = #{ user := U }) ->
-  case U of
-    undefined -> ?LOG_DEBUG("Adding new player: ~p", [UserId]);
-    UserId    -> ?LOG_DEBUG("Player already in the game: ~p", [UserId]);
-            _ -> ?LOG_DEBUG("Exchanging, leaving: ~p and enters: ~p", [U,UserId])
-  end,
   %% Capture information from database
   {ok, Points} = erlgame_db:get_user_points(UserId, ?MODULE),
-  {keep_state, GenStatemData#{user => UserId, points => Points}, 
-   [{reply,From,{ok, {UserId, Points}}}]};
-
-join({call,From}, { start_game }, _GenStatemData = #{ user := undefined }) ->
-  ?LOG_WARNING("You need a player to start the game"),
-  {keep_state_and_data, [{reply,From,{error, no_player}}]};
+  {keep_state, GenStatemData#{user => UserId, points => Points}};
 
 join({call,From}, { start_game }, GenStatemData) ->
   ?LOG_INFO("Starting Game"),
@@ -152,24 +133,24 @@ play(enter, _OldState, GenStatemData = #{ matrix    := {MaxX,MaxY},
   {keep_state, GenStatemData#{ food => Food }};
 
 % Reject reverse movements for snake greater than 1
-play(cast, {action, _UserId, ?MOVE_UP}, GenStatemData = #{last_action := ?MOVE_DOWN,
-                                                          snake_pos := [_,_|_] }) ->
+play(cast, {action, ?MOVE_UP}, GenStatemData = #{last_action := ?MOVE_DOWN,
+                                                 snake_pos := [_,_|_] }) ->
   ?LOG_DEBUG("Reverse moviment is not allowed"),
   {keep_state, GenStatemData};
-play(cast, {action, _UserId, ?MOVE_DOWN}, GenStatemData = #{last_action := ?MOVE_UP,
-                                                            snake_pos := [_,_|_]}) ->
+play(cast, {action, ?MOVE_DOWN}, GenStatemData = #{last_action := ?MOVE_UP,
+                                                   snake_pos := [_,_|_]}) ->
   ?LOG_DEBUG("Reverse moviment is not allowed"),
   {keep_state, GenStatemData};
-play(cast, {action, _UserId, ?MOVE_RIGHT}, GenStatemData = #{last_action := ?MOVE_LEFT,
-                                                             snake_pos := [_,_|_]}) ->
+play(cast, {action, ?MOVE_RIGHT}, GenStatemData = #{last_action := ?MOVE_LEFT,
+                                                    snake_pos := [_,_|_]}) ->
   ?LOG_DEBUG("Reverse moviment is not allowed"),
   {keep_state, GenStatemData};
-play(cast, {action, _UserId, ?MOVE_LEFT}, GenStatemData = #{last_action := ?MOVE_RIGHT,
-                                                             snake_pos := [_,_|_]}) ->
+play(cast, {action, ?MOVE_LEFT}, GenStatemData = #{last_action := ?MOVE_RIGHT,
+                                                   snake_pos := [_,_|_]}) ->
   ?LOG_DEBUG("Reverse moviment is not allowed"),
   {keep_state, GenStatemData};
 %% Update new action
-play(cast, {action, UserId, Action}, GenStatemData = #{user := UserId}) ->
+play(cast, {action, Action}, GenStatemData) ->
   ?LOG_DEBUG("Moving the User"),
   {keep_state, GenStatemData#{ last_action := Action }};
 
@@ -204,40 +185,27 @@ handle_common(Type, Msg, _, _GenStatemData) ->
 %%%===================================================================
 %%% Public functions
 %%%===================================================================
-%%--------------------------------------------------------------------
-%% @doc This function adds a user to the game. For this game, only one
-%%      user is allowed
-%%
-%% @param UserId User ID name 
-%% @end
-%%--------------------------------------------------------------------
--spec join_game(UserId :: list()) -> {ok | error, integer() }.
-join_game(UserId) when is_list(UserId) ->
-  gproc:ensure_reg(?GPROC_PLAYER_GROUP),
-  gen_statem:call(?MODULE, 
-    {add_user, erlgame_util:maybe_string_to_atom(UserId)}).
 
 %%--------------------------------------------------------------------
 %% @doc This function starts the game
 %%
-%% @param UserId User ID name 
+%% @param Pid Process Pid that the game is running
 %% @end
 %%--------------------------------------------------------------------
--spec start_game() -> {ok | error, integer() }.
-start_game() ->
-  gen_statem:call(?MODULE, {start_game}).
+-spec start_game(Pid :: pid()) -> {ok | error, integer() }.
+start_game(Pid) ->
+  gen_statem:call(Pid, {start_game}).
 
 %%--------------------------------------------------------------------
 %% @doc This function execute actions for the player
 %%
-%% @param UserId User ID name
+%% @param Pid Process Pid that the game is running
 %% @param Action Action to be executed 
 %% @end
 %%--------------------------------------------------------------------
--spec action(UserId :: list(), Action :: move()) -> ok.
-action(UserId, Action) when is_list(UserId), is_atom(Action) ->
-  gen_statem:cast(?MODULE, 
-    {action, erlgame_util:maybe_string_to_atom(UserId), Action}).
+-spec action(Pid :: pid(), Action :: move()) -> ok.
+action(Pid, Action) when is_pid(Pid), is_atom(Action) ->
+  gen_statem:cast(Pid, {action, Action}).
 
 %%====================================================================
 %% Internal functions
@@ -272,9 +240,9 @@ rand_food(MaxX, MaxY) ->
 %%--------------------------------------------------------------------
 -spec update_user_actions(S :: map()) -> {keep_state | end_game, map()}.
 update_user_actions(S = #{ last_action := idle, snake_pos := SnakePosition,
-                           food := Food}) ->
+                           food := Food, user_pid := UserPid}) ->
   ?LOG_DEBUG("User didn't make the first move"),
-  notify_players(SnakePosition, Food),
+  notify_players(UserPid, SnakePosition, Food),
   {keep_state,S};
 update_user_actions(S = #{ matrix := {MaxX,_}, snake_pos := [{MaxX,_}|_],
                        last_action := ?MOVE_RIGHT}) ->
@@ -286,8 +254,9 @@ update_user_actions(S = #{ matrix := {_,MaxY}, snake_pos := [{_,MaxY}|_],
   {end_game,S};
 update_user_actions(S = #{ snake_pos := [{_,0}|_], last_action := ?MOVE_DOWN}) ->
   {end_game,S};
-update_user_actions(S = #{ matrix := {MaxX,MaxY}, user := _User, points := _Points, 
-                           snake_pos := SnakePosition,food := Food, last_action := Action}) ->
+update_user_actions(S = #{ matrix := {MaxX,MaxY}, user := _User, user_pid := UserPid,
+                           points := _Points, snake_pos := SnakePosition,
+                           food := Food, last_action := Action}) ->
   %% Move Snake
   NewSnakePosition = move_snake(SnakePosition, new_head_position(SnakePosition, Action), Food),
   %% Check snake not overlapping
@@ -295,7 +264,7 @@ update_user_actions(S = #{ matrix := {MaxX,MaxY}, user := _User, points := _Poin
   %% Check New if new food is needed
   NewFood = check_food_was_eaten(MaxX,MaxY,NewSnakePosition, Food),
   %% Notify web players
-  notify_players(NewSnakePosition, Food),
+  notify_players(UserPid, NewSnakePosition, Food),
   {GameState,S#{snake_pos := NewSnakePosition, food => NewFood}}.
 
 %%--------------------------------------------------------------------
@@ -373,34 +342,17 @@ check_snake_knot(_) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec notify_game_over(GenStatemData :: map()) -> ok.
-notify_game_over(GenStatemData) ->
-  gproc_notify(?GPROC_PLAYER_GROUP, ?SNAKE_SM_GAME_OVER(GenStatemData)).
+notify_game_over(#{user_pid := UserPid} = GenStatemData) ->
+  erlang:send(UserPid, ?SNAKE_SM_GAME_OVER(GenStatemData)).
 
 %%--------------------------------------------------------------------
 %% @doc Notify subscribed players the game arena was updated
 %%
+%% @param UserPid Pid of message destination
 %% @param SnakePosition Snake position list
 %% @param Food Food position
 %% @end
 %%--------------------------------------------------------------------
--spec notify_players(SnakePosition :: list(), Food :: xy_position()) -> ok.
-notify_players(SnakePosition, Food) ->
-  gproc_notify(?GPROC_PLAYER_GROUP, ?SNAKE_SM_UPDATE_MSG(SnakePosition, Food)).
-
-%%--------------------------------------------------------------------
-%% @doc Gproc function to send messages to the respective pid group
-%%
-%% @param Group Gproc group to be notified
-%% @param Msg Message to be sent
-
-%% @end
-%%--------------------------------------------------------------------
--spec gproc_notify(tuple(), tuple()) -> ok.
-gproc_notify(Group, Msg) ->
-  %% Retrieve Pid List
-  Pids = gproc:lookup_pids(Group),
-  lists:foreach(
-    fun(Pid) ->
-      erlang:send(Pid, Msg)
-    end,
-    Pids).
+-spec notify_players(UserPid :: pid(), SnakePosition :: list(), Food :: xy_position()) -> ok.
+notify_players(UserPid, SnakePosition, Food) ->
+  erlang:send(UserPid, ?SNAKE_SM_UPDATE_MSG(SnakePosition, Food)).
