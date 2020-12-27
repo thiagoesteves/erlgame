@@ -7,6 +7,7 @@ var websocket;
 var player = document.getElementById("player");
 var output = document.getElementById("output");
 var board_game = document.querySelector('.game');
+var player_points = document.getElementById("current player");
 // Register Callbacks
 document.onkeydown = checkKey;
 
@@ -26,6 +27,11 @@ function showScreen(html) {
   var el = document.createElement("p");
   el.innerHTML = html;
   output.insertBefore(el, output.firstChild);
+};
+
+function showPlayerPoints(points) {
+  player_points.innerHTML =
+  `<div>Player</div><div>`+player.value+`</div><div>Points</div><div>`+points+`</div>`;
 };
 
 function updateBoard(json_from_erlang) {
@@ -48,6 +54,8 @@ function updateBoard(json_from_erlang) {
   }
   // Print game board
   board_game.innerHTML = drawning;
+  // Print Player points
+  showPlayerPoints(obj.points);
 };
 
 function onOpen(evt) {

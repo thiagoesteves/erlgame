@@ -240,9 +240,9 @@ rand_food(MaxX, MaxY) ->
 %%--------------------------------------------------------------------
 -spec update_user_actions(S :: map()) -> {keep_state | end_game, map()}.
 update_user_actions(S = #{ last_action := idle, snake_pos := SnakePosition,
-                           food := Food, user_pid := UserPid}) ->
+                           food := Food, user_pid := UserPid, points := Points}) ->
   ?LOG_DEBUG("User didn't make the first move"),
-  notify_players(UserPid, SnakePosition, Food),
+  notify_players(UserPid, Points, SnakePosition, Food),
   {keep_state,S};
 update_user_actions(S = #{ matrix := {MaxX,_}, snake_pos := [{MaxX,_}|_],
                        last_action := ?MOVE_RIGHT}) ->
@@ -255,7 +255,7 @@ update_user_actions(S = #{ matrix := {_,MaxY}, snake_pos := [{_,MaxY}|_],
 update_user_actions(S = #{ snake_pos := [{_,0}|_], last_action := ?MOVE_DOWN}) ->
   {end_game,S};
 update_user_actions(S = #{ matrix := {MaxX,MaxY}, user := _User, user_pid := UserPid,
-                           points := _Points, snake_pos := SnakePosition,
+                           points := Points, snake_pos := SnakePosition,
                            food := Food, last_action := Action}) ->
   %% Move Snake
   NewSnakePosition = move_snake(SnakePosition, new_head_position(SnakePosition, Action), Food),
@@ -263,9 +263,12 @@ update_user_actions(S = #{ matrix := {MaxX,MaxY}, user := _User, user_pid := Use
   GameState = check_snake_knot(NewSnakePosition),
   %% Check New if new food is needed
   NewFood = check_food_was_eaten(MaxX,MaxY,NewSnakePosition, Food),
+  %% Increase Points
+  NewPoints = Points + 10,
   %% Notify web players
-  notify_players(UserPid, NewSnakePosition, Food),
-  {GameState,S#{snake_pos := NewSnakePosition, food => NewFood}}.
+  notify_players(UserPid, NewPoints, NewSnakePosition, Food),
+  {GameState,S#{snake_pos := NewSnakePosition, food => NewFood, 
+                points => NewPoints}}.
 
 %%--------------------------------------------------------------------
 %% @doc This function moves the whole sneak based on the new head
@@ -349,10 +352,11 @@ notify_game_over(#{user_pid := UserPid} = GenStatemData) ->
 %% @doc Notify subscribed players the game arena was updated
 %%
 %% @param UserPid Pid of message destination
+%% @param UserPoints Points from the current user
 %% @param SnakePosition Snake position list
 %% @param Food Food position
 %% @end
 %%--------------------------------------------------------------------
--spec notify_players(UserPid :: pid(), SnakePosition :: list(), Food :: xy_position()) -> ok.
-notify_players(UserPid, SnakePosition, Food) ->
-  erlang:send(UserPid, ?SNAKE_SM_UPDATE_MSG(SnakePosition, Food)).
+-spec notify_players(UserPid :: pid(), UserPoints :: integer(), SnakePosition :: list(), Food :: xy_position()) -> ok.
+notify_players(UserPid, UserPoints, SnakePosition, Food) ->
+  erlang:send(UserPid, ?SNAKE_SM_UPDATE_MSG(SnakePosition, UserPoints, Food)).

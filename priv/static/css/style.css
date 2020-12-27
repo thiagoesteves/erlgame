@@ -66,7 +66,6 @@ input[type=text]:focus {
   float: left;
   padding: 10px;
   height: 620px;
-  border-radius: 4px;
 }
 
 /* Left and right column */
@@ -135,14 +134,6 @@ input[type=text]:focus {
   align-items: center;
 }
   
-.game > div.winner {
-  background: yellow;
-}
-  
-.game > div.winner > span {
-  color: blue;
-}
-  
 @media (min-width: 600px) {
   .game {
     width: 600px;
@@ -152,6 +143,41 @@ input[type=text]:focus {
   }
   
   .game>div {
+    border-radius: 2px;
+  }
+}
+
+.points {
+  width: 50vw;
+  height: 50vw;
+  margin: 0 auto;
+  background-color: #34495e;
+  color: #fff;
+  display: grid;
+  grid-template: repeat(2, 1fr) / repeat(2, 1fr)
+}
+  
+.points>div {
+  width: 2,5vw;
+  height: 2,5vw;
+  border: 1px solid #2c3e50;
+  font-family: Helvetica;
+  font-weight: bold;
+  font-size: 1em;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+  
+@media (min-width: 100px) {
+  .points {
+    width: 300px;
+    height:100px;
+    border-radius: 10px;
+    border: 6px solid #2c3e50;
+  }
+  
+  .points>div {
     border-radius: 2px;
   }
 }

@@ -46,7 +46,7 @@ websocket_handle({text, JsonBin}, State) ->
   NewPid = execute(jsone:decode(JsonBin), State),
   {[], NewPid}.
 
-websocket_info(?SNAKE_SM_UPDATE_MSG(S,{Fx,Fy}), State) ->
+websocket_info(?SNAKE_SM_UPDATE_MSG(S,Points,{Fx,Fy}), State) ->
   %% prepare Json file to be sent throught websockets
   #{ loop_map := NewMap} = lists:foldl(
     fun({X,Y}, #{counter := Acc, loop_map := M}) ->
@@ -57,6 +57,7 @@ websocket_info(?SNAKE_SM_UPDATE_MSG(S,{Fx,Fy}), State) ->
            #{ x => X, y => Y}} }}
     end,
     #{counter => 0, loop_map => #{ food => #{x=> Fx, y => Fy},
+                                   points => Points,
                                    snake => #{} }},
     S),
   {[{text,jsone:encode(NewMap)}], State};
