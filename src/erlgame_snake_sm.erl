@@ -222,15 +222,13 @@ action(Pid, Action) when is_pid(Pid), is_atom(Action) ->
 -spec food_position(MaxX :: integer(), MaxY :: integer(), 
                     SnakePosition :: list() ) -> xy_position().
 food_position(MaxX, MaxY, SnakePosition) ->
-  {X,Y} = rand_food(MaxX, MaxY),
-  case lists:member({X,Y}, SnakePosition) of
-    false -> {X,Y};
-    true  -> food_position(MaxX, MaxY, SnakePosition)
-  end.
+  EmptyPos = generate_board(MaxX,MaxY) -- SnakePosition,
+  RandomPosition = rand:uniform(length(EmptyPos)),
+  lists:nth(RandomPosition, EmptyPos).
 
--spec rand_food(MaxX :: integer(), MaxY :: integer()) -> xy_position().
-rand_food(MaxX, MaxY) ->
-  { rand:uniform(MaxX+1) - 1, rand:uniform(MaxY+1) - 1 }.
+-spec generate_board(MaxX :: integer(), MaxY :: integer()) -> list().
+generate_board(MaxX, MaxY) ->
+  [{X,Y} || X <- lists:seq(0,MaxX), Y <- lists:seq(0,MaxY)].
 
 %%--------------------------------------------------------------------
 %% @doc Update user action and check points
