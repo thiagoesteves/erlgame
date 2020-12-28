@@ -36,7 +36,8 @@
 
 %% external api
 -export([get_user_points/2,
-         add_user_points/3]).
+         add_user_points/3,
+         get_best_player/1]).
 
 %%%===================================================================
 %%% Local Defines
@@ -69,6 +70,10 @@ init([]) ->
 
 handle_call( { get_user_points, UserId, Game } , _From, State) ->
   Res = get_user_points_priv(UserId, Game),
+  {reply, Res, State};
+
+handle_call( { get_best_player, Game } , _From, State) ->
+  Res = get_best_player_priv(Game),
   {reply, Res, State}.
 
 handle_cast( { add_user_points, UserId, Game, Points }, State) ->
@@ -102,7 +107,8 @@ get_user_points(UserId, Game) when is_atom(UserId), is_atom(Game) ->
   gen_server:call(?MODULE, { get_user_points, UserId, Game } ).
 
 %%--------------------------------------------------------------------
-%% @doc This function adds points to the respective user
+%% @doc This function adds points to the respective user, If the user 
+%%      doesn't exist, it will be created.
 %%
 %% @param UserId User ID name 
 %% @param Game Game name 
@@ -113,6 +119,16 @@ get_user_points(UserId, Game) when is_atom(UserId), is_atom(Game) ->
 add_user_points(UserId, Game, Points) 
   when is_atom(UserId), is_atom(Game), is_integer(Points) ->
   gen_server:cast(?MODULE, { add_user_points, UserId, Game, Points } ).
+
+%%--------------------------------------------------------------------
+%% @doc This function retrieves the best player for an specific game
+%%
+%% @param Game Game name 
+%% @end
+%%--------------------------------------------------------------------
+-spec get_best_player(Game :: atom() ) -> { ok, {atom(), integer()} }.
+get_best_player(Game) when is_atom(Game) ->
+  gen_server:call(?MODULE, { get_best_player, Game } ).
 
 %%====================================================================
 %% Internal functions
@@ -127,8 +143,27 @@ get_user_points_priv(UserId, Game) ->
           {ok, 0}
   end.
 
--spec add_user_points_priv(UserId :: atom(), Game :: atom(), Points :: integer() ) -> true.
-add_user_points_priv(UserId, Game, Points) ->
-  %% Retrieve current number of points
-  [?DB_KVS(UserId, Game, CurrentPoints)] = ets:lookup(?USER_POINTS, {UserId, Game}),
-  ets:insert(?USER_POINTS, ?DB_KVS(UserId, Game, CurrentPoints+Points)).
+-spec add_user_points_priv(UserId :: atom(), Game :: atom(), PointsToAdd :: integer() ) -> true.
+add_user_points_priv(UserId, Game, PointsToAdd) ->
+  %% Check the user exist, if not, create one and add points
+  CurrentPoints = case ets:lookup(?USER_POINTS, {UserId, Game}) of
+    [?DB_KVS(UserId, Game, Points)] -> Points;
+    [] -> 0
+  end,
+  ets:insert(?USER_POINTS, ?DB_KVS(UserId, Game, CurrentPoints+PointsToAdd)).
+
+-spec get_best_player_priv(Game :: atom()) -> {ok, integer() }.
+get_best_player_priv(Game) ->
+  %% Search the entire table for the User ID (must be optimized)
+  #{players := PlayersList} = ets:foldl(
+    fun(?DB_KVS(UserId, GameName, Points), #{ max     := MaxP,
+                                              players := Players} = Acc) ->
+       case {GameName, Points} of
+         {Game, P } when P > MaxP   -> #{max => P, players => [{UserId, P}]};
+         {Game, P } when P =:= MaxP -> #{max => P, players => [{UserId, P} | Players]};
+         _       -> Acc
+       end
+    end,
+    #{max => 0, players => []},
+    ?USER_POINTS),
+{ok, PlayersList}.

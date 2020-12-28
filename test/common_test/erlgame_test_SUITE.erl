@@ -40,6 +40,8 @@
 %%%===================================================================
 -export([erlgame_start_stop_ok/1,
          erlgame_db_insert_read/1,
+         erlgame_db_insert_get_best_player/1,
+         erlgame_db_add_non_existent_and_get_best_player/1,
          erlgame_db_full_coverage_ok/1,
          erlgame_snake_join_ok/1,
          erlgame_snake_start_ok/1,
@@ -58,6 +60,8 @@
 
 all() -> [erlgame_start_stop_ok,
           erlgame_db_insert_read,
+          erlgame_db_insert_get_best_player,
+          erlgame_db_add_non_existent_and_get_best_player,
           erlgame_db_full_coverage_ok,
           erlgame_snake_join_ok,
           erlgame_snake_start_ok,
@@ -143,7 +147,7 @@ erlgame_start_stop_ok(_Config) ->
 erlgame_db_insert_read(_Config) ->
 
   %% Start the Server
-  application:ensure_all_started(erlgame),
+  erlgame_sup:start_link(),
 
   UserList = lists:map(
       fun(User) ->
@@ -181,6 +185,68 @@ erlgame_db_insert_read(_Config) ->
   ok.
 
 %%%===================================================================
+%%% Function: erlgame_db_insert_get_best_player
+%%%
+%%% Description: Test the read of the best players in an specific game
+%%%===================================================================
+erlgame_db_insert_get_best_player(_Config) ->
+
+  %% Start the Server
+  erlgame_sup:start_link(),
+
+  %% Check best player is empty
+  ?assertEqual( {ok, []}, erlgame_db:get_best_player(?MODULE) ),
+
+  ?assertEqual( {ok, 0}, erlgame_db:get_user_points(user_test0, ?MODULE) ),
+  ?assertEqual( {ok, 0}, erlgame_db:get_user_points(user_test1, ?MODULE) ),
+  ?assertEqual( {ok, 0}, erlgame_db:get_user_points(user_test2, ?MODULE) ),
+
+  %% Add points
+  ?assertEqual( ok, erlgame_db:add_user_points(user_test0, ?MODULE, 10) ),
+  ?assertEqual( ok, erlgame_db:add_user_points(user_test1, ?MODULE, 20) ),
+  ?assertEqual( ok, erlgame_db:add_user_points(user_test2, ?MODULE, 30) ),
+  %% wait the update
+  timer:sleep(100),
+
+  %% Check best player
+  ?assertEqual( {ok, [{user_test2, 30}]}, erlgame_db:get_best_player(?MODULE) ),
+
+  %% Add points to another player to get more best players
+  ?assertEqual( ok, erlgame_db:add_user_points(user_test1, ?MODULE, 10) ),
+  %% wait the update
+  timer:sleep(100),
+
+  %% Check best players
+  ExpectedList = lists:usort([{user_test2, 30}, {user_test1,30}]),
+  {ok, ReadList} = erlgame_db:get_best_player(?MODULE),
+  ?assertEqual( ExpectedList, lists:usort(ReadList) ),
+  ok.
+
+%%%===================================================================
+%%% Function: erlgame_db_add_non_existent_and_get_best_player
+%%%
+%%% Description: Test to add non existent players and read the best player
+%%%===================================================================
+erlgame_db_add_non_existent_and_get_best_player(_Config) ->
+
+  %% Start the Server
+  erlgame_sup:start_link(),
+
+  %% Check best player is empty
+  ?assertEqual( {ok, []}, erlgame_db:get_best_player(?MODULE) ),
+
+  %% Add points
+  ?assertEqual( ok, erlgame_db:add_user_points(user_test0, ?MODULE, 10) ),
+  ?assertEqual( ok, erlgame_db:add_user_points(user_test1, ?MODULE, 20) ),
+  ?assertEqual( ok, erlgame_db:add_user_points(user_test2, ?MODULE, 30) ),
+  ?assertEqual( ok, erlgame_db:add_user_points(user_test2, my_game, 50) ),
+  %% wait the update
+  timer:sleep(100),
+  %% Check best player
+  ?assertEqual( {ok, [{user_test2, 50}]}, erlgame_db:get_best_player(my_game) ),
+  ok.
+
+%%%===================================================================
 %%% Function: erlgame_db_full_coverage_ok
 %%%
 %%% Description: This test will only guarantee 100% coverage for
@@ -188,7 +254,7 @@ erlgame_db_insert_read(_Config) ->
 %%%===================================================================
 erlgame_db_full_coverage_ok(_Config) ->
   %% Start the Server
-  application:ensure_all_started(erlgame),
+  erlgame_sup:start_link(),
 
   erlang:send(?DB_NAME, {none}),
   erlgame_db:code_change(none, none, none),
@@ -204,7 +270,7 @@ erlgame_db_full_coverage_ok(_Config) ->
 erlgame_snake_join_ok(_Config) ->
 
   %% Start the Server
-  application:ensure_all_started(erlgame),
+  erlgame_sup:start_link(),
 
   %% Create arena game
   {ok, GamePid} = erlgame_snake_sm:start_link("snake_test", self(), {10,10}, 10),
@@ -222,7 +288,7 @@ erlgame_snake_join_ok(_Config) ->
 erlgame_snake_start_ok(_Config) ->
 
   %% Start the Server
-  application:ensure_all_started(erlgame),
+  erlgame_sup:start_link(),
 
   %% Create arena game
   {ok, GamePid} = erlgame_snake_sm:start_link("hauhsdfuahsukfhkasdfh", self(), {10,10}, 10),
@@ -243,7 +309,7 @@ erlgame_snake_start_ok(_Config) ->
 erlgame_snake_check_idle_ok(_Config) ->
 
   %% Start the Server
-  application:ensure_all_started(erlgame),
+  erlgame_sup:start_link(),
 
   %% Create arena game
   {ok, GamePid} = erlgame_snake_sm:start_link("user", self(), {10,10}, 10),
@@ -266,7 +332,7 @@ erlgame_snake_check_idle_ok(_Config) ->
 %%%===================================================================
 erlgame_snake_go_right_ok(_Config) ->
   %% Start the Server
-  application:ensure_all_started(erlgame),
+  erlgame_sup:start_link(),
   %% Create arena game
   {ok, GamePid} = erlgame_snake_sm:start_link("Thiago", self(), {10,10}, 1),
   %% Start Game
@@ -284,7 +350,7 @@ erlgame_snake_go_right_ok(_Config) ->
 %%%===================================================================
 erlgame_snake_go_left_ok(_Config) ->
   %% Start the Server
-  application:ensure_all_started(erlgame),
+  erlgame_sup:start_link(),
   %% Create arena game
   {ok, GamePid} = erlgame_snake_sm:start_link("Thiago", self(), {10,10}, 1),
   %% Start Game
@@ -302,7 +368,7 @@ erlgame_snake_go_left_ok(_Config) ->
 %%%===================================================================
 erlgame_snake_go_up_ok(_Config) ->
   %% Start the Server
-  application:ensure_all_started(erlgame),
+  erlgame_sup:start_link(),
   %% Create arena game
   {ok, GamePid} = erlgame_snake_sm:start_link("Thiago", self(), {10,10}, 1),
   %% Start Game
@@ -320,7 +386,7 @@ erlgame_snake_go_up_ok(_Config) ->
 %%%===================================================================
 erlgame_snake_go_down_ok(_Config) ->
   %% Start the Server
-  application:ensure_all_started(erlgame),
+  erlgame_sup:start_link(),
   %% Create arena game
   {ok, GamePid} = erlgame_snake_sm:start_link("Thiago", self(), {10,10}, 1),
   %% Start Game
@@ -338,7 +404,7 @@ erlgame_snake_go_down_ok(_Config) ->
 %%%===================================================================
 erlgame_snake_seek_food_ok(_Config) ->
   %% Start the Server
-  application:ensure_all_started(erlgame),
+  erlgame_sup:start_link(),
   %% Create arena game
   {ok, GamePid} = erlgame_snake_sm:start_link("user", self(), {5,5}, 1),
   %% Put Snake in the default position
@@ -357,7 +423,7 @@ erlgame_snake_seek_food_ok(_Config) ->
 %%%===================================================================
 erlgame_snake_reverse_up_not_allowed_ok(_Config) ->
   %% Start the Server
-  application:ensure_all_started(erlgame),
+  erlgame_sup:start_link(),
   %% Create arena game
   {ok, GamePid} = erlgame_snake_sm:start_link("user", self(), {10,10}, 1),
   %% Insert snake bigger then 2 positions to avoid reverse moviment
@@ -377,7 +443,7 @@ erlgame_snake_reverse_up_not_allowed_ok(_Config) ->
 %%%===================================================================
 erlgame_snake_reverse_down_not_allowed_ok(_Config) ->
   %% Start the Server
-  application:ensure_all_started(erlgame),
+  erlgame_sup:start_link(),
   %% Create arena game
   {ok, GamePid} = erlgame_snake_sm:start_link("user", self(), {10,10}, 1),
   %% Insert snake bigger then 2 positions to avoid reverse moviment
@@ -397,7 +463,7 @@ erlgame_snake_reverse_down_not_allowed_ok(_Config) ->
 %%%===================================================================
 erlgame_snake_reverse_right_not_allowed_ok(_Config) ->
   %% Start the Server
-  application:ensure_all_started(erlgame),
+  erlgame_sup:start_link(),
   %% Create arena game
   {ok, GamePid} = erlgame_snake_sm:start_link("user", self(), {10,10}, 1),
   %% Insert snake bigger then 2 positions to avoid reverse moviment
@@ -417,7 +483,7 @@ erlgame_snake_reverse_right_not_allowed_ok(_Config) ->
 %%%===================================================================
 erlgame_snake_knot_game_over_ok(_Config) ->
   %% Start the Server
-  application:ensure_all_started(erlgame),
+  erlgame_sup:start_link(),
   %% Create arena game
   {ok, GamePid} = erlgame_snake_sm:start_link("user", self(), {20,20}, 1),
   %% Insert snake bigger then 2 positions to avoid reverse moviment
@@ -436,7 +502,7 @@ erlgame_snake_knot_game_over_ok(_Config) ->
 %%%===================================================================
 erlgame_snake_reverse_left_not_allowed_ok(_Config) ->
   %% Start the Server
-  application:ensure_all_started(erlgame),
+  erlgame_sup:start_link(),
   %% Create arena game
   {ok, GamePid} = erlgame_snake_sm:start_link("user", self(), {10,10}, 1),
   %% Insert snake bigger then 2 positions to avoid reverse moviment
@@ -457,7 +523,7 @@ erlgame_snake_reverse_left_not_allowed_ok(_Config) ->
 %%%===================================================================
 erlgame_snake_full_coverage_ok(_Config) ->
   %% Start the Server
-  application:ensure_all_started(erlgame),
+  erlgame_sup:start_link(),
 
   {ok, GamePid} = erlgame_snake_sm:start_link("user", self(), {10,10}, 1),
 
