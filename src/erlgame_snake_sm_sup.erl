@@ -39,7 +39,7 @@
 %%====================================================================
 %% API functions implementation
 %%====================================================================
--spec start_link() -> {ok, pid()} | {already_started, pid()} | {shutdown, term()} | term().
+-spec start_link() -> {ok, pid()} | {error, {already_started, pid()}} | {shutdown, term()} | term().
 start_link() ->
     supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
@@ -73,10 +73,9 @@ init([]) ->
 %%--------------------------------------------------------------------
 -spec create_game(UserName :: string(), UserPid :: pid(),
                   Matrix :: tuple(), LoopTime :: integer()) -> 
-  { ok , undefined | pid() }.
+  { ok , pid() } | {error, {already_started, pid()}}.
 create_game(UserName, UserPid, Matrix, LoopTime) ->
-  {ok, Pid} = supervisor:start_child(?MODULE, [UserName, UserPid, Matrix, LoopTime]),
-  {ok, Pid}.
+  supervisor:start_child(?MODULE, [UserName, UserPid, Matrix, LoopTime]).
 
 %%====================================================================
 %% Internal functions

@@ -43,8 +43,8 @@ websocket_init(State) ->
 
 websocket_handle({text, JsonBin}, State) ->
   ?LOG_INFO("~p", [JsonBin]),
-  NewPid = execute(jsone:decode(JsonBin), State),
-  {[], NewPid}.
+  execute(jsone:decode(JsonBin)),
+  {[], State}.
 
 websocket_info(?SNAKE_SM_UPDATE_MSG(S,Points,{Fx,Fy}), State) ->
   %% prepare Json file to be sent throught websockets
@@ -97,17 +97,29 @@ init(Req0, Opts) ->
 %% @param Map Map with client operation
 %% @end
 %%--------------------------------------------------------------------
--spec execute(map(), Pid :: pid()) -> pid().
-execute(#{<<"action">> := Action,<<"user">> := _User}, Pid) ->
-  erlgame_snake_sm:action(Pid, binary_to_atom(Action)),
-  Pid;
+-spec execute(map()) -> ok.
+execute(#{<<"action">> := Action,<<"user">> := User}) ->
+  erlgame_snake_sm:action(b2l(User), binary_to_atom(Action)),
+  ok;
 
-execute(#{<<"user">> := User}, _) ->
-  {ok, Pid} = erlgame_snake_sm_sup:create_game(binary_to_list(User), self(), {20,20}, 200),
-  {ok, _} = erlgame_snake_sm:start_game(Pid),
-  Pid;
+execute(#{<<"user">> := User}) ->
+  case erlgame_snake_sm_sup:create_game(b2l(User), self(), {20,20}, 200) of
+    {ok, _}                        -> 
+      {ok, _} = erlgame_snake_sm:start_game(b2l(User));
+    {error, {already_started, _} } -> 
+      none % Game already created
+  end,
+  ok;
 
-execute(#{<<"request">> := <<"get_best_player">>, <<"game">> := <<"snake">>}, Pid) ->
+execute(#{<<"request">> := <<"get_best_player">>, <<"game">> := <<"snake">>}) ->
   {ok, PlayersList} = erlgame_db:get_best_player(?SNAKE_SM_GAME_NAME),
   erlang:send(self(), ?SNAKE_SM_BEST_PLAYERS(PlayersList)),
-  Pid.
+  ok.
+
+%%--------------------------------------------------------------------
+%% @doc convert binary to list
+%%
+%% @param Bin Binary to be converted
+%% @end
+%%--------------------------------------------------------------------
+b2l(Bin) -> erlang:binary_to_list(Bin).
