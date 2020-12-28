@@ -60,6 +60,10 @@
 
 -type xy_position() :: {integer(), integer()}.
 
+%% Defines for points
+-define(POINTS_BY_LOOP_TIME,  10).
+-define(POINTS_BY_EATEN_FOOD, 50).
+
 %%%===================================================================
 %%% API
 %%%===================================================================
@@ -252,7 +256,7 @@ update_user_actions(S = #{ matrix := {_,MaxY}, snake_pos := [{_,MaxY}|_],
   {end_game,S};
 update_user_actions(S = #{ snake_pos := [{_,0}|_], last_action := ?MOVE_DOWN}) ->
   {end_game,S};
-update_user_actions(S = #{ matrix := {MaxX,MaxY}, user := _User, user_pid := UserPid,
+update_user_actions(S = #{ matrix := {MaxX,MaxY}, user := User, user_pid := UserPid,
                            points := Points, snake_pos := SnakePosition,
                            food := Food, last_action := Action}) ->
   %% Move Snake
@@ -261,8 +265,14 @@ update_user_actions(S = #{ matrix := {MaxX,MaxY}, user := _User, user_pid := Use
   GameState = check_snake_knot(NewSnakePosition),
   %% Check New if new food is needed
   NewFood = check_food_was_eaten(MaxX,MaxY,NewSnakePosition, Food),
-  %% Increase Points
-  NewPoints = Points + 10,
+  %% Increase Points (check if Food was eaten)
+  AddPoints = case Food of
+    NewFood -> ?POINTS_BY_LOOP_TIME;
+    _       -> ?POINTS_BY_LOOP_TIME + ?POINTS_BY_EATEN_FOOD
+  end,
+  NewPoints = Points + AddPoints,
+  %% Notify database
+  erlgame_db:add_user_points(User, ?MODULE, AddPoints),
   %% Notify web players
   notify_players(UserPid, NewPoints, NewSnakePosition, Food),
   {GameState,S#{snake_pos := NewSnakePosition, food => NewFood, 

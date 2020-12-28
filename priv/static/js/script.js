@@ -8,6 +8,7 @@ var player = document.getElementById("player");
 var output = document.getElementById("output");
 var board_game = document.querySelector('.game');
 var player_points = document.getElementById("current player");
+var best_player_points = document.getElementById("best player");
 // Register Callbacks
 document.onkeydown = checkKey;
 
@@ -58,8 +59,18 @@ function updateBoard(json_from_erlang) {
   showPlayerPoints(obj.points);
 };
 
+function updateBesties(json_from_erlang) {
+  var obj = JSON.parse(json_from_erlang);
+  // Parse Snake besties
+  const besties = Object.entries(obj.best_players.snake).map( 
+    ([k,v]) =>  
+    `<div>Best Player</div><div>`+k+`</div><div>Points</div><div>`+v+`</div>`);
+  best_player_points.innerHTML = besties.join("");
+};
+
 function onOpen(evt) {
   showScreen('<span style="color: green;">CONNECTED</span>');
+  requestBestPlayer();
 };
 
 function onClose(evt) {
@@ -69,9 +80,13 @@ function onClose(evt) {
 function onMessage(evt) {
   showScreen('<span style="color: blue;">' + evt.data + '</span>');
   switch (evt.data) {
-    // Snake game
+    // Snake game info
     case (evt.data.match(/food/) || {}).input:
       updateBoard(evt.data);
+      break;
+    // Best Player Snake game
+    case (evt.data.match(/best_players/) || {}).input:
+      updateBesties(evt.data);
       break;
     default:
       console.log("Didn't match" + evt.data);
@@ -118,6 +133,15 @@ function createGame() {
   // Compose message to be sent
   var msg = {
     user: player.value
+  };
+  sendMsg(msg);
+};
+
+function requestBestPlayer() {
+  // Compose message to be sent
+  var msg = {
+    request: "get_best_player",
+    game: "snake",
   };
   sendMsg(msg);
 };

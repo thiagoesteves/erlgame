@@ -334,7 +334,7 @@ erlgame_snake_go_right_ok(_Config) ->
   %% Start the Server
   erlgame_sup:start_link(),
   %% Create arena game
-  {ok, GamePid} = erlgame_snake_sm:start_link("Thiago", self(), {10,10}, 1),
+  {ok, GamePid} = erlgame_snake_sm_sup:create_game("Thiago", self(), {10,10}, 1),
   %% Start Game
   erlgame_snake_sm:start_game(GamePid),
   %% Move
@@ -352,7 +352,7 @@ erlgame_snake_go_left_ok(_Config) ->
   %% Start the Server
   erlgame_sup:start_link(),
   %% Create arena game
-  {ok, GamePid} = erlgame_snake_sm:start_link("Thiago", self(), {10,10}, 1),
+  {ok, GamePid} = erlgame_snake_sm_sup:create_game("Thiago", self(), {10,10}, 1),
   %% Start Game
   erlgame_snake_sm:start_game(GamePid),
   %% Move
@@ -370,7 +370,7 @@ erlgame_snake_go_up_ok(_Config) ->
   %% Start the Server
   erlgame_sup:start_link(),
   %% Create arena game
-  {ok, GamePid} = erlgame_snake_sm:start_link("Thiago", self(), {10,10}, 1),
+  {ok, GamePid} = erlgame_snake_sm_sup:create_game("Thiago", self(), {10,10}, 1),
   %% Start Game
   erlgame_snake_sm:start_game(GamePid),
   %% Move
@@ -388,7 +388,7 @@ erlgame_snake_go_down_ok(_Config) ->
   %% Start the Server
   erlgame_sup:start_link(),
   %% Create arena game
-  {ok, GamePid} = erlgame_snake_sm:start_link("Thiago", self(), {10,10}, 1),
+  {ok, GamePid} = erlgame_snake_sm_sup:create_game("Thiago", self(), {10,10}, 1),
   %% Start Game
   erlgame_snake_sm:start_game(GamePid),
   %% Move

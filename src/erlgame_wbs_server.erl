@@ -63,8 +63,17 @@ websocket_info(?SNAKE_SM_UPDATE_MSG(S,Points,{Fx,Fy}), State) ->
   {[{text,jsone:encode(NewMap)}], State};
 
 websocket_info(?SNAKE_SM_GAME_OVER(_GenStateData), State) ->
-  ?LOG_INFO("~p", ["Game Over"]),
+  ?LOG_INFO("Game Over"),
   {reply, {close, 1000, <<"Game Over">>}, State};
+
+websocket_info(?SNAKE_SM_BEST_PLAYERS(PlayersList), State) ->
+  NewMap = lists:foldl(
+    fun({Name, Points}, #{best_players := #{ snake := Acc }}) ->
+      #{ best_players => #{ snake => Acc#{ Name => Points }}}
+    end,
+    #{ best_players => #{ snake => #{}} },
+    PlayersList),
+  {[{text,jsone:encode(NewMap)}], State};
 
 websocket_info(_Info, State) ->
   {[], State}.
@@ -96,4 +105,9 @@ execute(#{<<"action">> := Action,<<"user">> := _User}, Pid) ->
 execute(#{<<"user">> := User}, _) ->
   {ok, Pid} = erlgame_snake_sm_sup:create_game(binary_to_list(User), self(), {20,20}, 200),
   {ok, _} = erlgame_snake_sm:start_game(Pid),
+  Pid;
+
+execute(#{<<"request">> := <<"get_best_player">>, <<"game">> := <<"snake">>}, Pid) ->
+  {ok, PlayersList} = erlgame_db:get_best_player(?SNAKE_SM_GAME_NAME),
+  erlang:send(self(), ?SNAKE_SM_BEST_PLAYERS(PlayersList)),
   Pid.

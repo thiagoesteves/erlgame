@@ -148,8 +148,8 @@ input[type=text]:focus {
 }
 
 .points {
-  width: 50vw;
-  height: 50vw;
+  width: 100vw;
+  height: 100vw;
   margin: 0 auto;
   background-color: #34495e;
   color: #fff;
@@ -172,7 +172,7 @@ input[type=text]:focus {
 @media (min-width: 100px) {
   .points {
     width: 300px;
-    height:100px;
+    height:150px;
     border-radius: 10px;
     border: 6px solid #2c3e50;
   }
