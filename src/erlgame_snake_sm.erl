@@ -74,8 +74,8 @@
 start_link(UserName, UserPid, Matrix, LoopTime) when is_list(UserName),
                                                      is_pid(UserPid),
                                                      is_tuple(Matrix), 
-                                                     is_integer(LoopTime)->
-  gen_statem:start_link(?MODULE, 
+                                                     is_integer(LoopTime)->                                             
+  gen_statem:start_link({local,get_registered_name(UserName)}, ?MODULE, 
     [erlgame_util:maybe_string_to_atom(UserName), 
      UserPid, Matrix, LoopTime], []).
 
@@ -193,23 +193,29 @@ handle_common(Type, Msg, _, _GenStatemData) ->
 %%--------------------------------------------------------------------
 %% @doc This function starts the game
 %%
-%% @param Pid Process Pid that the game is running
+%% @param Pid Process Pid (or User Name) that the game is running
 %% @end
 %%--------------------------------------------------------------------
--spec start_game(Pid :: pid()) -> {ok | error, integer() }.
-start_game(Pid) ->
-  gen_statem:call(Pid, {start_game}).
+-spec start_game(pid() | list()) -> {ok | error, integer() }.
+start_game(Pid) when is_pid(Pid) ->
+  gen_statem:call(Pid, {start_game});
+
+start_game(UserName) when is_list(UserName) ->
+  gen_statem:call(get_registered_name(UserName), {start_game}).
 
 %%--------------------------------------------------------------------
 %% @doc This function execute actions for the player
 %%
-%% @param Pid Process Pid that the game is running
+%% @param Pid Process Pid (or User Name) that the game is running
 %% @param Action Action to be executed 
 %% @end
 %%--------------------------------------------------------------------
--spec action(Pid :: pid(), Action :: move()) -> ok.
+-spec action(pid() | list(), Action :: move()) -> ok.
 action(Pid, Action) when is_pid(Pid), is_atom(Action) ->
-  gen_statem:cast(Pid, {action, Action}).
+  gen_statem:cast(Pid, {action, Action});
+
+action(UserName, Action) when is_list(UserName), is_atom(Action) ->
+  gen_statem:cast(get_registered_name(UserName), {action, Action}).
 
 %%====================================================================
 %% Internal functions
@@ -368,3 +374,13 @@ notify_game_over(#{user_pid := UserPid} = GenStatemData) ->
 -spec notify_players(UserPid :: pid(), UserPoints :: integer(), SnakePosition :: list(), Food :: xy_position()) -> ok.
 notify_players(UserPid, UserPoints, SnakePosition, Food) ->
   erlang:send(UserPid, ?SNAKE_SM_UPDATE_MSG(SnakePosition, UserPoints, Food)).
+
+%%--------------------------------------------------------------------
+%% @doc Retrieves registered snake game name based on the user id
+%%
+%% @param UserName User name
+%% @end
+%%--------------------------------------------------------------------
+-spec get_registered_name(UserName :: string()) -> atom().
+get_registered_name(UserName) ->
+  erlgame_util:maybe_string_to_atom(?MODULE_STRING ++ ":" ++ UserName).

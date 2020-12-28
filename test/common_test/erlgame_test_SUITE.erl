@@ -34,6 +34,7 @@
 -define(SNAKE_DEFAULT_POSITION, {0,0}).
 -define(SNAKE_GAME,             erlgame_snake_sm).
 -define(MAX_TIMEOUT_FEED_SNAKE, 10000).
+-define(DEFAULT_PLAYER,         "Thiago").
 
 %%%===================================================================
 %%% Test exports
@@ -47,10 +48,15 @@
          erlgame_snake_start_ok/1,
          erlgame_snake_full_coverage_ok/1,
          erlgame_snake_check_idle_ok/1,
+         erlgame_snake_already_created_ok/1,
          erlgame_snake_go_right_ok/1,
          erlgame_snake_go_left_ok/1,
          erlgame_snake_go_up_ok/1,
          erlgame_snake_go_down_ok/1,
+         erlgame_snake_go_right_by_name_ok/1,
+         erlgame_snake_go_left_by_name_ok/1,
+         erlgame_snake_go_up_by_name_ok/1,
+         erlgame_snake_go_down_by_name_ok/1,
          erlgame_snake_seek_food_ok/1,
          erlgame_snake_reverse_up_not_allowed_ok/1,
          erlgame_snake_reverse_down_not_allowed_ok/1,
@@ -67,10 +73,15 @@ all() -> [erlgame_start_stop_ok,
           erlgame_snake_start_ok,
           erlgame_snake_full_coverage_ok,
           erlgame_snake_check_idle_ok,
+          erlgame_snake_already_created_ok,
           erlgame_snake_go_right_ok,
           erlgame_snake_go_left_ok,
           erlgame_snake_go_up_ok,
           erlgame_snake_go_down_ok,
+          erlgame_snake_go_right_by_name_ok,
+          erlgame_snake_go_left_by_name_ok,
+          erlgame_snake_go_up_by_name_ok,
+          erlgame_snake_go_down_by_name_ok,
           erlgame_snake_seek_food_ok,
           erlgame_snake_reverse_up_not_allowed_ok,
           erlgame_snake_reverse_down_not_allowed_ok,
@@ -326,6 +337,25 @@ erlgame_snake_check_idle_ok(_Config) ->
   ok.
 
 %%%===================================================================
+%%% Function: erlgame_snake_already_created_ok
+%%%
+%%% Description: Try to create a game for a user that was already 
+%%%              created
+%%%===================================================================
+erlgame_snake_already_created_ok(_Config) ->
+
+  %% Start the Server
+  erlgame_sup:start_link(),
+
+  %% Create arena game
+  {ok, _} = erlgame_snake_sm:start_link("user", self(), {10,10}, 10),
+
+  %% Try to create same game with the same user
+  ?assertMatch( {error, {already_started, _} }, 
+           erlgame_snake_sm:start_link("user", self(), {10,10}, 10)),
+  ok.
+
+%%%===================================================================
 %%% Function: erlgame_snake_go_right_ok
 %%%
 %%% Description: Create arena game, start game and make the first move
@@ -334,7 +364,7 @@ erlgame_snake_go_right_ok(_Config) ->
   %% Start the Server
   erlgame_sup:start_link(),
   %% Create arena game
-  {ok, GamePid} = erlgame_snake_sm_sup:create_game("Thiago", self(), {10,10}, 1),
+  {ok, GamePid} = erlgame_snake_sm_sup:create_game(?DEFAULT_PLAYER, self(), {10,10}, 1),
   %% Start Game
   erlgame_snake_sm:start_game(GamePid),
   %% Move
@@ -352,7 +382,7 @@ erlgame_snake_go_left_ok(_Config) ->
   %% Start the Server
   erlgame_sup:start_link(),
   %% Create arena game
-  {ok, GamePid} = erlgame_snake_sm_sup:create_game("Thiago", self(), {10,10}, 1),
+  {ok, GamePid} = erlgame_snake_sm_sup:create_game(?DEFAULT_PLAYER, self(), {10,10}, 1),
   %% Start Game
   erlgame_snake_sm:start_game(GamePid),
   %% Move
@@ -370,7 +400,7 @@ erlgame_snake_go_up_ok(_Config) ->
   %% Start the Server
   erlgame_sup:start_link(),
   %% Create arena game
-  {ok, GamePid} = erlgame_snake_sm_sup:create_game("Thiago", self(), {10,10}, 1),
+  {ok, GamePid} = erlgame_snake_sm_sup:create_game(?DEFAULT_PLAYER, self(), {10,10}, 1),
   %% Start Game
   erlgame_snake_sm:start_game(GamePid),
   %% Move
@@ -388,11 +418,83 @@ erlgame_snake_go_down_ok(_Config) ->
   %% Start the Server
   erlgame_sup:start_link(),
   %% Create arena game
-  {ok, GamePid} = erlgame_snake_sm_sup:create_game("Thiago", self(), {10,10}, 1),
+  {ok, GamePid} = erlgame_snake_sm_sup:create_game(?DEFAULT_PLAYER, self(), {10,10}, 1),
   %% Start Game
   erlgame_snake_sm:start_game(GamePid),
   %% Move
   erlgame_snake_sm:action(GamePid, ?MOVE_DOWN),
+  %% Wait for the game over state and check the last state
+  ?assertMatch( {game_over, #{last_action := ?MOVE_DOWN}}, wait_game_over() ),
+  ok.
+
+%%%===================================================================
+%%% Function: erlgame_snake_go_right_by_name_ok
+%%%
+%%% Description: Create arena game, start game and make the first move
+%%%===================================================================
+erlgame_snake_go_right_by_name_ok(_Config) ->
+  %% Start the Server
+  erlgame_sup:start_link(),
+  %% Create arena game
+  {ok, _} = erlgame_snake_sm_sup:create_game(?DEFAULT_PLAYER, self(), {10,10}, 1),
+  %% Start Game
+  erlgame_snake_sm:start_game(?DEFAULT_PLAYER),
+  %% Move
+  erlgame_snake_sm:action(?DEFAULT_PLAYER, ?MOVE_RIGHT),
+  %% Wait for the game over state and check the last state
+  ?assertMatch( {game_over, #{last_action := ?MOVE_RIGHT}}, wait_game_over() ),
+  ok.
+
+%%%===================================================================
+%%% Function: erlgame_snake_go_left_by_name_ok
+%%%
+%%% Description: Create arena game, start game and make the first move
+%%%===================================================================
+erlgame_snake_go_left_by_name_ok(_Config) ->
+  %% Start the Server
+  erlgame_sup:start_link(),
+  %% Create arena game
+  {ok, _} = erlgame_snake_sm_sup:create_game(?DEFAULT_PLAYER, self(), {10,10}, 1),
+  %% Start Game
+  erlgame_snake_sm:start_game(?DEFAULT_PLAYER),
+  %% Move
+  erlgame_snake_sm:action(?DEFAULT_PLAYER, ?MOVE_LEFT),
+  %% Wait for the game over state and check the last state
+  ?assertMatch( {game_over, #{last_action := ?MOVE_LEFT}}, wait_game_over() ),
+  ok.
+
+%%%===================================================================
+%%% Function: erlgame_snake_go_up_by_name_ok
+%%%
+%%% Description: Create arena game, start game and make the first move
+%%%===================================================================
+erlgame_snake_go_up_by_name_ok(_Config) ->
+  %% Start the Server
+  erlgame_sup:start_link(),
+  %% Create arena game
+  {ok, _} = erlgame_snake_sm_sup:create_game(?DEFAULT_PLAYER, self(), {10,10}, 1),
+  %% Start Game
+  erlgame_snake_sm:start_game(?DEFAULT_PLAYER),
+  %% Move
+  erlgame_snake_sm:action(?DEFAULT_PLAYER, ?MOVE_UP),
+  %% Wait for the game over state and check the last state
+  ?assertMatch( {game_over, #{last_action := ?MOVE_UP}}, wait_game_over() ),
+  ok.
+
+%%%===================================================================
+%%% Function: erlgame_snake_go_down_by_name_ok
+%%%
+%%% Description: Create arena game, start game and make the first move
+%%%===================================================================
+erlgame_snake_go_down_by_name_ok(_Config) ->
+  %% Start the Server
+  erlgame_sup:start_link(),
+  %% Create arena game
+  {ok, _} = erlgame_snake_sm_sup:create_game(?DEFAULT_PLAYER, self(), {10,10}, 1),
+  %% Start Game
+  erlgame_snake_sm:start_game(?DEFAULT_PLAYER),
+  %% Move
+  erlgame_snake_sm:action(?DEFAULT_PLAYER, ?MOVE_DOWN),
   %% Wait for the game over state and check the last state
   ?assertMatch( {game_over, #{last_action := ?MOVE_DOWN}}, wait_game_over() ),
   ok.
