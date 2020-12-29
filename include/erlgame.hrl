@@ -20,7 +20,7 @@
 -define(SNAKE_SM_GAME_NAME, erlgame_snake_sm).
 -define(SNAKE_SM_UPDATE_MSG(SnakePosition,Points,Food),  
           {snake_sm_updated,SnakePosition,Points,Food}).
--define(SNAKE_SM_GAME_OVER(State),                {snake_sm_game_over, State}).
+-define(SNAKE_SM_GAME_OVER(State),   {snake_sm_game_over, State}).
 -define(SNAKE_SM_BEST_PLAYERS(List), {?SNAKE_SM_GAME_NAME, List}).
 
 %% Possible moviments

@@ -103,12 +103,12 @@ execute(#{<<"action">> := Action,<<"user">> := User}) ->
   ok;
 
 execute(#{<<"user">> := User}) ->
-  case erlgame_snake_sm_sup:create_game(b2l(User), self(), {20,20}, 200) of
-    {ok, _}                        -> 
-      {ok, _} = erlgame_snake_sm:start_game(b2l(User));
-    {error, {already_started, _} } -> 
-      none % Game already created
+  %% Create game and ignore if the game is already created
+  case erlgame_snake_sm_sup:create_game(b2l(User), {20,20}, 200) of
+    {ok, _} -> none;
+    {error, {already_started, _} } -> none
   end,
+  {ok, _} = erlgame_snake_sm:start_game(b2l(User)),
   ok;
 
 execute(#{<<"request">> := <<"get_best_player">>, <<"game">> := <<"snake">>}) ->

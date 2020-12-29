@@ -27,7 +27,7 @@
 
 -export([start_link/0]).
 
--export([init/1, create_game/4]).
+-export([init/1, create_game/3]).
 
 %%--------------------------------------------------------------------
 %% Definitions
@@ -66,16 +66,15 @@ init([]) ->
 %%      snake game
 %%
 %% @param UserName User name
-%% @param UserPid User pid
 %% @param Matrix Game Matrix
 %% @param LoopTime updating time
 %% @end
 %%--------------------------------------------------------------------
--spec create_game(UserName :: string(), UserPid :: pid(),
-                  Matrix :: tuple(), LoopTime :: integer()) -> 
+-spec create_game(UserName :: string(), Matrix :: tuple(), 
+                  LoopTime :: integer()) -> 
   { ok , pid() } | {error, {already_started, pid()}}.
-create_game(UserName, UserPid, Matrix, LoopTime) ->
-  supervisor:start_child(?MODULE, [UserName, UserPid, Matrix, LoopTime]).
+create_game(UserName, Matrix, LoopTime) ->
+  supervisor:start_child(?MODULE, [UserName, Matrix, LoopTime]).
 
 %%====================================================================
 %% Internal functions
