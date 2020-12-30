@@ -73,10 +73,7 @@ websocket_info(?SNAKE_SM_BEST_PLAYERS(PlayersList), State) ->
     end,
     #{ best_players => #{ snake => #{}} },
     PlayersList),
-  {[{text,jsone:encode(NewMap)}], State};
-
-websocket_info(_Info, State) ->
-  {[], State}.
+  {[{text,jsone:encode(NewMap)}], State}.
 
 %%%===================================================================
 %%% API Implementation
