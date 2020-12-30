@@ -27,7 +27,7 @@
 
 %% gen_statem callbacks
 -export([init/1,
-         terminate/2,
+         terminate/3,
          callback_mode/0,
          code_change/3]).
 
@@ -83,18 +83,31 @@ start_link(UserName, Matrix, LoopTime) when is_list(UserName),
 -spec init(list()) -> {ok, atom(), map()}.
 init([UserId, Matrix, LoopTime]) ->
   logger:set_module_level(?MODULE, error),
-  GenStatemData = #{ matrix      => Matrix,
-                     user        => UserId,
-                     points      => undefined,
-                     snake_pos   => [{1,1}],
-                     last_action => idle,
-                     loop_time   => LoopTime,
-                     food        => {0,0} },
-  {ok, join, GenStatemData}.
+  { NextState, GenStatemData } = case erlgame_db:get_game_state(UserId, ?MODULE) of
+    { ok, undefined } ->
+      { join,
+        #{ matrix      => Matrix,
+           user        => UserId,
+           points      => undefined,
+           snake_pos   => [{1,1}],
+           last_action => idle,
+           loop_time   => LoopTime,
+           food        => {0,0} }
+      };
+    {ok, {OldState, OldGenData} } ->
+      % Clear Old State
+      erlgame_db:save_game_state(UserId, ?MODULE, undefined),
+      {OldState, OldGenData}
+  end,
+  {ok, NextState, GenStatemData}.
 
 %% @private
-terminate(normal, _State) ->
-  ?LOG_DEBUG("I'm Terminating now"),
+terminate(normal, _, _) ->
+  ok;
+
+terminate(Reason, State, Data = #{user := UserId}) ->
+  ?LOG_ERROR("I'm Terminating now Data: ~p ~p", [Reason, Data]),
+  erlgame_db:save_game_state(UserId, ?MODULE, {State, Data}),
   ok.
 
 %% @private
@@ -115,22 +128,21 @@ join(enter, _OldState, GenStatemData = #{user := UserId}) ->
   {ok, Points} = erlgame_db:get_user_points(UserId, ?MODULE),
   {keep_state, GenStatemData#{user => UserId, points => Points}};
 
-join({call,From}, { start_game }, GenStatemData) ->
+join({call,From}, { start_game }, GenStatemData = #{ matrix := {MaxX,MaxY},
+                                                     snake_pos := SnakePosition} ) ->
   ?LOG_INFO("Starting Game"),
-  {next_state, play, GenStatemData, [{reply,From,{ok, 0}}]};
+  %% Create food for the snake
+  Food = food_position(MaxX, MaxY, SnakePosition),
+  {next_state, play, GenStatemData#{ food => Food }, [{reply,From,{ok, 0}}]};
 
 ?HANDLE_COMMON.
 
 %%% JOIN STATE ================================================================
-play(enter, _OldState, GenStatemData = #{ matrix    := {MaxX,MaxY},
-                                          loop_time := LoopTime,
-                                          snake_pos := SnakePosition }) ->
+play(enter, _OldState, GenStatemData = #{ loop_time := LoopTime }) ->
   ?LOG_DEBUG("Play - enter state"),
-  %% Create food for the snake
-  Food = food_position(MaxX, MaxY, SnakePosition),
   %% Start the loop control, which will check and play with the user
   erlang:send_after(LoopTime, self(), ?LOOP_MSG),
-  {keep_state, GenStatemData#{ food => Food }};
+  {keep_state, GenStatemData};
 
 % Reject reverse movements for snake greater than 1
 play(cast, {action, ?MOVE_UP}, GenStatemData = #{last_action := ?MOVE_DOWN,
@@ -179,10 +191,6 @@ game_over(enter, _OldState, GenStatemData) ->
 %%% HANDLE COMMON FUNCTION ====================================================
 handle_common(info, _Msg,  State, _GenStatemData) ->
   ?LOG_DEBUG("Info Request - My current State: ~p", [State]),
-  keep_state_and_data;
-
-handle_common(Type, Msg, _, _GenStatemData) ->
-  ?LOG_DEBUG("Unexpected message from ~p MSG: ~p", [Type, Msg]),
   keep_state_and_data.
 
 %%%===================================================================

@@ -63,6 +63,9 @@
          erlgame_snake_reverse_right_not_allowed_ok/1,
          erlgame_snake_reverse_left_not_allowed_ok/1,
          erlgame_snake_another_observer_ok/1,
+         erlgame_snake_crash_join_ok/1,
+         erlgame_snake_crash_recovery_state_join_ok/1,
+         erlgame_snake_crash_recovery_state_play_ok/1,
          erlgame_snake_knot_game_over_ok/1]).
 
 all() -> [erlgame_start_stop_ok,
@@ -85,6 +88,9 @@ all() -> [erlgame_start_stop_ok,
           erlgame_snake_reverse_right_not_allowed_ok,
           erlgame_snake_reverse_left_not_allowed_ok,
           erlgame_snake_another_observer_ok,
+          erlgame_snake_crash_join_ok,
+          erlgame_snake_crash_recovery_state_join_ok,
+          erlgame_snake_crash_recovery_state_play_ok,
           erlgame_snake_knot_game_over_ok
          ].
 
@@ -575,6 +581,74 @@ erlgame_snake_another_observer_ok(_Config) ->
   ok.
 
 %%%===================================================================
+%%% Function: erlgame_snake_crash_join_ok
+%%%
+%%% Description: create the snake game at join state, crash and 
+%%%               expects it to return
+%%%===================================================================
+erlgame_snake_crash_join_ok(_Config) ->
+  %% Start the Server
+  erlgame_sup:start_link(),
+  %% Create arena game
+  {ok, GamePid} = erlgame_snake_sm_sup:create_game(?DEFAULT_PLAYER3, {10,10}, 1),
+  %% Insert Snake in a specific position
+  change_snake_position(GamePid, [{1,1}]),
+  %% Send Kill signal to the snake game
+  exit(GamePid, kill),
+  %% Check new process was started
+  timer:sleep(10),
+  %% Check the both Pids are different and the state is still in join
+  ?assertNotEqual( GamePid, whereis(get_snake_name(?DEFAULT_PLAYER3)) ),
+  ?assertMatch( {join, _}, try_get_state(get_snake_name(?DEFAULT_PLAYER3)) ),
+  ok.
+
+%%%===================================================================
+%%% Function: erlgame_snake_crash_recovery_state_ok
+%%%
+%%% Description: create the snake game at join state, crash and 
+%%%               expects it to return
+%%%===================================================================
+erlgame_snake_crash_recovery_state_join_ok(_Config) ->
+  %% Start the Server
+  erlgame_sup:start_link(),
+  %% Create arena game
+  {ok, GamePid} = erlgame_snake_sm_sup:create_game(?DEFAULT_PLAYER3, {10,10}, 1),
+  %% Insert Snake in a specific position
+  change_snake_position(GamePid, [{1,1}]),
+  %% Send Kill signal to the snake game
+  gen_statem:cast(GamePid, {none}),
+  %% Check new process was started
+  timer:sleep(10),
+  %% Check the both Pids are different and the state is still in join
+  ?assertNotEqual( GamePid, whereis(get_snake_name(?DEFAULT_PLAYER3)) ),
+  ?assertMatch( {join, _}, try_get_state(get_snake_name(?DEFAULT_PLAYER3)) ),
+  ok.
+
+%%%===================================================================
+%%% Function: erlgame_snake_crash_recovery_state_play_ok
+%%%
+%%% Description: create the snake game at join state, crash and 
+%%%               expects it to return
+%%%===================================================================
+erlgame_snake_crash_recovery_state_play_ok(_Config) ->
+  %% Start the Server
+  erlgame_sup:start_link(),
+  %% Create arena game
+  {ok, GamePid} = erlgame_snake_sm_sup:create_game(?DEFAULT_PLAYER3, {10,10}, 1),
+  %% Insert Snake in a specific position
+  change_snake_position(GamePid, [{1,1}]),
+  %% Play Game
+  erlgame_snake_sm:start_game(?DEFAULT_PLAYER3),
+  %% Send Kill signal to the snake game
+  gen_statem:cast(GamePid, {none}),
+  %% Check new process was started
+  timer:sleep(10),
+  %% Check the both Pids are different and the state is still in play
+  ?assertNotEqual( GamePid, whereis(get_snake_name(?DEFAULT_PLAYER3)) ),
+  ?assertMatch( {play, _}, try_get_state(get_snake_name(?DEFAULT_PLAYER3)) ),
+  ok.
+
+%%%===================================================================
 %%% Function: erlgame_snake_full_coverage_ok
 %%%
 %%% Description: This test will only guarantee 100% coverage for
@@ -589,8 +663,7 @@ erlgame_snake_full_coverage_ok(_Config) ->
   %% Join Game (Handle Common)
   erlang:send(GamePid, {none}),
   erlgame_snake_sm:code_change(none, none, none),
-  erlgame_snake_sm:terminate(normal, none),
-  gen_statem:cast(GamePid, {none}),
+  erlgame_snake_sm:terminate(normal, none, none),
 
   %% Start Game (Handle Common)
   erlgame_snake_sm:start_game(?DEFAULT_PLAYER3),
