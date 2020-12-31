@@ -1,4 +1,5 @@
 // Declare Global Variables
+const snake_game = "erlgame_snake_sm";
 var arena = {
   row:    21,
   column: 21,
@@ -15,7 +16,7 @@ document.onkeydown = checkKey;
 function connectServer()
 {
     wsHost = "ws://" + window.location.host + "/websocket";
-    showScreen('<b>Connecting to: ' +  wsHost + '</b>');
+    showErlangOutputScreen('<b>Connecting to: ' +  wsHost + '</b>');
     websocket = new WebSocket(wsHost);
     // Register Callbacks
     websocket.onopen    = function(evt) { onOpen(evt) };
@@ -24,7 +25,7 @@ function connectServer()
     websocket.onerror   = function(evt) { onError(evt) };
 };
 
-function showScreen(html) {
+function showErlangOutputScreen(html) {
   var el = document.createElement("p");
   el.innerHTML = html;
   output.insertBefore(el, output.firstChild);
@@ -35,8 +36,7 @@ function showPlayerPoints(points) {
   `<div>Player</div><div>`+player.value+`</div><div>Points</div><div>`+points+`</div>`;
 };
 
-function updateBoard(json_from_erlang) {
-  // console.log(json_from_erlang);
+function updateSnakeBoard(json_from_erlang) {
   var obj = JSON.parse(json_from_erlang);
   console.log(obj);
   // Parse Snake position
@@ -59,35 +59,40 @@ function updateBoard(json_from_erlang) {
   showPlayerPoints(obj.points);
 };
 
-function updateBesties(json_from_erlang) {
+function updateSnakeBesties(json_from_erlang) {
   var obj = JSON.parse(json_from_erlang);
   // Parse Snake besties
-  const besties = Object.entries(obj.best_players.snake).map( 
+  const besties = Object.entries(obj.best_players.erlgame_snake_sm).map( 
     ([k,v]) =>  
     `<div>Best Player</div><div>`+k+`</div><div>Points</div><div>`+v+`</div>`);
   best_player_points.innerHTML = besties.join("");
 };
 
 function onOpen(evt) {
-  showScreen('<span style="color: green;">CONNECTED</span>');
-  requestBestPlayer();
+  showErlangOutputScreen('<span style="color: green;">CONNECTED</span>');
+  requestSnakeBestPlayer();
 };
 
 function onClose(evt) {
-  showScreen('<span style="color: red;"> Disconnected by '+ evt.reason +'</span>');
+  showErlangOutputScreen('<span style="color: red;"> Disconnected by '+ evt.reason +'</span>');
+  // Check if a Game Over was received
+  if (evt.reason.match(/^(?=.*Game)(?=.*Over)/) || {}) {
+    gameOver();
+  }
 };
 
 function onMessage(evt) {
-  showScreen('<span style="color: blue;">' + evt.data + '</span>');
+  showErlangOutputScreen('<span style="color: blue;">' + evt.data + '</span>');
   switch (evt.data) {
-    // Snake game info
-    case (evt.data.match(/food/) || {}).input:
-      updateBoard(evt.data);
+    // Snake game update info
+    case (evt.data.match(/^(?=.*update)(?=.*erlgame_snake_sm)/) || {}).input:
+      updateSnakeBoard(evt.data);
       break;
-    // Best Player Snake game
-    case (evt.data.match(/best_players/) || {}).input:
-      updateBesties(evt.data);
+    // Snake game best player
+    case (evt.data.match(/^(?=.*best_players)(?=.*erlgame_snake_sm)/) || {}).input:
+      updateSnakeBesties(evt.data);
       break;
+    // Invalid message
     default:
       console.log("Didn't match" + evt.data);
       break;
@@ -95,7 +100,7 @@ function onMessage(evt) {
 };
 
 function onError(evt) {
-	showScreen('<span style="color: red;">ERROR: ' + evt.data + '</span>');
+	showErlangOutputScreen('<span style="color: red;">ERROR: ' + evt.data + '</span>');
 };
 
 function checkKey(e) {
@@ -123,56 +128,40 @@ function checkKey(e) {
 function sendAction(move_player) {
   // Compose message to be sent
   var msg = {
+    game: snake_game,
     action: move_player,
     user: player.value
   };
   sendMsg(msg);
 };
 
-function createGame() {
+function createSnakeGame() {
   // Compose message to be sent
   var msg = {
+    game: snake_game,
     user: player.value
   };
   sendMsg(msg);
 };
 
-function requestBestPlayer() {
+function requestSnakeBestPlayer() {
   // Compose message to be sent
   var msg = {
     request: "get_best_player",
-    game: "snake",
+    game: snake_game,
   };
   sendMsg(msg);
 };
 
-//Check if websocket is open and send it
+// Check if websocket is open and send it
 function sendMsg(msg) {
 	if (websocket.readyState == websocket.OPEN) {
 		websocket.send(JSON.stringify(msg));
 	} else {
-		showScreen('websocket is not connected');
+		showErlangOutputScreen('websocket is not connected');
 	};
 };
 
 function gameOver() {
-  // console.log(json_from_erlang);
-  var obj = JSON.parse(json_from_erlang);
-  console.log(obj);
-  // Parse Snake position
-  snake_position = Object.entries(obj.snake).map( ([k,v]) => v );
-  var drawning='';
-  for (var row=(arena.row-1); row>=0; row--) {
-    for (var column=0; column<arena.column; column++) {
-      if (obj.food.x === column && obj.food.y === row) {
-        drawning += `<div style="background-color: red;">@</div>`;
-      } else if (snake_position.find(elem => elem.x === column && elem.y === row)) {
-        drawning += `<div style="background-color: lightblue;"> </div>`;
-      } else {
-        drawning += `<div> </div><div> </div><div> </div>`;
-      }
-    }
-  }
-  // Print game board
-  board_game.innerHTML = drawning;
+  console.log("Game Over");
 };

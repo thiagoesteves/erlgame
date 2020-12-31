@@ -17,7 +17,8 @@
 -define(DB_NAME, erlgame_db).
 
 %% Snake game definitions
--define(SNAKE_SM_GAME_NAME, erlgame_snake_sm).
+-define(SNAKE_SM_GAME_NAME,   erlgame_snake_sm).
+-define(SNAKE_SM_GAME_NAME_S, "erlgame_snake_sm").
 -define(SNAKE_SM_UPDATE_MSG(SnakePosition,Points,Food),  
           {snake_sm_updated,SnakePosition,Points,Food}).
 -define(SNAKE_SM_GAME_OVER(State),   {snake_sm_game_over, State}).

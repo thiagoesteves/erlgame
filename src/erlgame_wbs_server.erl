@@ -60,7 +60,7 @@ websocket_info(?SNAKE_SM_UPDATE_MSG(S,Points,{Fx,Fy}), State) ->
                                    points => Points,
                                    snake => #{} }},
     S),
-  {[{text,jsone:encode(NewMap)}], State};
+  {[{text,jsone:encode(NewMap#{update => ?SNAKE_SM_GAME_NAME})}], State};
 
 websocket_info(?SNAKE_SM_GAME_OVER(_GenStateData), State) ->
   ?LOG_INFO("Game Over"),
@@ -68,10 +68,10 @@ websocket_info(?SNAKE_SM_GAME_OVER(_GenStateData), State) ->
 
 websocket_info(?SNAKE_SM_BEST_PLAYERS(PlayersList), State) ->
   NewMap = lists:foldl(
-    fun({Name, Points}, #{best_players := #{ snake := Acc }}) ->
-      #{ best_players => #{ snake => Acc#{ Name => Points }}}
+    fun({Name, Points}, #{best_players := #{ ?SNAKE_SM_GAME_NAME := Acc }}) ->
+      #{ best_players => #{ ?SNAKE_SM_GAME_NAME => Acc#{ Name => Points }}}
     end,
-    #{ best_players => #{ snake => #{}} },
+    #{ best_players => #{ ?SNAKE_SM_GAME_NAME => #{}} },
     PlayersList),
   {[{text,jsone:encode(NewMap)}], State}.
 
@@ -95,11 +95,13 @@ init(Req0, Opts) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec execute(map()) -> ok.
-execute(#{<<"action">> := Action,<<"user">> := User}) ->
+execute(#{<<"game">> := <<?SNAKE_SM_GAME_NAME_S>>,
+          <<"action">> := Action,<<"user">> := User}) ->
   erlgame_snake_sm:action(b2l(User), binary_to_atom(Action)),
   ok;
 
-execute(#{<<"user">> := User}) ->
+execute(#{<<"game">> := <<?SNAKE_SM_GAME_NAME_S>>,
+          <<"user">> := User}) ->
   %% Create game and ignore if the game is already created
   case erlgame_snake_sm_sup:create_game(b2l(User), {20,20}, 200) of
     {ok, _} -> none;
@@ -108,7 +110,8 @@ execute(#{<<"user">> := User}) ->
   {ok, _} = erlgame_snake_sm:start_game(b2l(User)),
   ok;
 
-execute(#{<<"request">> := <<"get_best_player">>, <<"game">> := <<"snake">>}) ->
+execute(#{<<"game">> := <<?SNAKE_SM_GAME_NAME_S>>,
+          <<"request">> := <<"get_best_player">> }) ->
   {ok, PlayersList} = erlgame_db:get_best_player(?SNAKE_SM_GAME_NAME),
   erlang:send(self(), ?SNAKE_SM_BEST_PLAYERS(PlayersList)),
   ok.

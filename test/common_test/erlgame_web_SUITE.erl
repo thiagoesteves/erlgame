@@ -40,16 +40,16 @@
 
 -define(INITIAL_MESSAGE,    <<"Erlgame is alive!">>).
 -define(GAME_OVER_MSG,      {close,1000,<<"Game Over">>}).
--define(SNAKE_BEST_PLAYER,  <<"{\"request\":\"get_best_player\",\"game\":\"snake\"}">>).
--define(CREATE_USER(User), list_to_binary("{\"user\":\""++User++"\"}") ).
+-define(SNAKE_BEST_PLAYER,  <<"{\"request\":\"get_best_player\",\"game\":\"erlgame_snake_sm\"}">>).
+-define(CREATE_USER(User),  list_to_binary("{\"game\":\"erlgame_snake_sm\", \"user\":\""++User++"\"}") ).
 -define(ACTION_MOVE(User, Move), 
   list_to_binary( 
-    "{\"action\":\""++atom_to_list(Move)++"\",\"user\":\""++User++"\"}") ).
+    "{\"game\":\"erlgame_snake_sm\",\"action\":\""++atom_to_list(Move)++"\",\"user\":\""++User++"\"}") ).
 -define(BEST_PLAYER_MSG_RESPONSE(User, Points), 
   list_to_binary(
-    "{\"best_players\":{\"snake\":{\""++User++"\":"++integer_to_list(Points)++"}}}") ).
+    "{\"best_players\":{\"erlgame_snake_sm\":{\""++User++"\":"++integer_to_list(Points)++"}}}") ).
 -define(BEST_PLAYER_MSG_RESPONSE_EMPTY, 
-   <<"{\"best_players\":{\"snake\":{}}}">> ).
+   <<"{\"best_players\":{\"erlgame_snake_sm\":{}}}">> ).
 
 %%%===================================================================
 %%% Test exports
@@ -209,7 +209,7 @@ erlgame_snake_websocket_game_over_ok(_Config) ->
   ?assertMatch( {play, #{user := 'Thiago Esteves'}}, 
                 try_get_snake_game_state(?DEFAULT_PLAYER) ),
   %% Start the moviment
-  gun:ws_send(ConnPid, StreamRef, {text, ?ACTION_MOVE(?DEFAULT_PLAYER, ?MOVE_UP)}),
+  gun:ws_send(ConnPid, StreamRef, {text, ?ACTION_MOVE(?DEFAULT_PLAYER, ?MOVE_LEFT)}),
   %% Check game over message was received
   ?assertEqual( ok, wait_until_msg_is_received(?GAME_OVER_MSG) ),
   %% Shutdown
@@ -291,7 +291,7 @@ erlgame_snake_websocket_connect_same_user_ok(_Config) ->
   ?assertMatch( [_, _], gproc:lookup_pids(?SNAKE_GPROC_KEY(?DEFAULT_PLAYER)) ),
 
   %% Start the moviment
-  gun:ws_send(ConnPid, StreamRef, {text, ?ACTION_MOVE(?DEFAULT_PLAYER, ?MOVE_UP)}),
+  gun:ws_send(ConnPid, StreamRef, {text, ?ACTION_MOVE(?DEFAULT_PLAYER, ?MOVE_LEFT)}),
   %% Check game over message was received 2 times (Two clients were registered)
   ?assertEqual( ok, wait_until_msg_is_received(?GAME_OVER_MSG) ),
   ?assertEqual( ok, wait_until_msg_is_received(?GAME_OVER_MSG) ),

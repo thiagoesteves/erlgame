@@ -2,7 +2,13 @@
 [![Coverage Status](https://coveralls.io/repos/github/thiagoesteves/erlgame/badge.svg?branch=main)](https://coveralls.io/github/thiagoesteves/erlgame?branch=main)
 [![Erlant/OTP Release](https://img.shields.io/badge/Erlang-OTP--23.0-green.svg)](https://github.com/erlang/otp/releases/tag/OTP-23.0)
 
-# This code is a template
+# This application is a game webserver written in Erlang
+
+The app is an example of how Erlang can be used to be part of the Game backend as a server for a single player or multiple players. In this code you will find examples of how to use cowboy webserver, gen_statem (and how to recover from a crash), supervision tree using simple_one_for_one, aws cloud formation to deploy using aws create stack, common tests, gun to test webserver, etc.
+
+The Games available are:
+ * Snake Game
+ * To Be defined
 
 ## Getting started ##
 You need to clone the repository and download rebar/rebar3 (if it's not already available in your path).
@@ -14,10 +20,7 @@ To compile and run
 ```
 make
 ```
-
-### Description
-
-
+Open your web browser, got to http://127.0.0.1:8080/ type your Name and play
 
 ### Unit Test and coverage
 
