@@ -33,7 +33,7 @@ function showErlangOutputScreen(html) {
 
 function showPlayerPoints(points) {
   player_points.innerHTML =
-  `<div>Player</div><div>`+player.value+`</div><div>Points</div><div>`+points+`</div>`;
+  `<div>PLAYER</div><div>`+player.value+`</div><div>POINTS</div><div>`+points+`</div>`;
 };
 
 function updateSnakeBoard(json_from_erlang) {
@@ -64,7 +64,7 @@ function updateSnakeBesties(json_from_erlang) {
   // Parse Snake besties
   const besties = Object.entries(obj.best_players.erlgame_snake_sm).map( 
     ([k,v]) =>  
-    `<div>Best Player</div><div>`+k+`</div><div>Points</div><div>`+v+`</div>`);
+    `<div>BEST PLAYER</div><div>`+k+`</div><div>POINTS</div><div>`+v+`</div>`);
   best_player_points.innerHTML = besties.join("");
 };
 
@@ -142,6 +142,8 @@ function createSnakeGame() {
     user: player.value
   };
   sendMsg(msg);
+  // Hide button
+  document.getElementById('play').style.visibility = 'hidden';
 };
 
 function requestSnakeBestPlayer() {
