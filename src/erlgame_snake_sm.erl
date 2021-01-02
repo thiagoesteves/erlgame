@@ -172,9 +172,10 @@ play({call,From}, { start_game }, GenStatemData) ->
 % Execute loop update
 play(info, loop_control, GenStatemData = #{ loop_time := LoopTime }) ->
   ?LOG_DEBUG("Play - Action"),
+  %% Send message to keep the loop
+  erlang:send_after(LoopTime, self(), ?LOOP_MSG),
   case update_user_actions(GenStatemData) of
     {keep_state, NewState} -> %% keep the cycle running
-                  erlang:send_after(LoopTime, self(), ?LOOP_MSG),
                   {keep_state, NewState};
     {end_game, NewState} -> %% Game Over
                   {next_state, game_over, NewState}
