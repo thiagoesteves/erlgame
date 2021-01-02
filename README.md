@@ -29,3 +29,7 @@ The following command will invoke common test and coverage.
 ```
 make test
 ```
+
+### Deploy at AWS Amazon
+
+The folder aws contains a cloudFormation template file you can use to create a EC2 with ubuntu 18.04 and automatically install and run the erlgame (The full installation takes up to 10 minutes).

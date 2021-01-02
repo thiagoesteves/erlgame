@@ -15,14 +15,18 @@ document.onkeydown = checkKey;
 
 function connectServer()
 {
+  if (window.location.href.indexOf("8080") > -1) {
     wsHost = "ws://" + window.location.host + "/websocket";
-    showErlangOutputScreen('<b>Connecting to: ' +  wsHost + '</b>');
-    websocket = new WebSocket(wsHost);
-    // Register Callbacks
-    websocket.onopen    = function(evt) { onOpen(evt) };
-    websocket.onclose   = function(evt) { onClose(evt) };
-    websocket.onmessage = function(evt) { onMessage(evt) };
-    websocket.onerror   = function(evt) { onError(evt) };
+  } else {
+    wsHost = "ws://" + window.location.host + ":8080/websocket";
+  }
+  showErlangOutputScreen('<b>Connecting to: ' +  wsHost + '</b>');
+  websocket = new WebSocket(wsHost);
+  // Register Callbacks
+  websocket.onopen    = function(evt) { onOpen(evt) };
+  websocket.onclose   = function(evt) { onClose(evt) };
+  websocket.onmessage = function(evt) { onMessage(evt) };
+  websocket.onerror   = function(evt) { onError(evt) };
 };
 
 function showErlangOutputScreen(html) {

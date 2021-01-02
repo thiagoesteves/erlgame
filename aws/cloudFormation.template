@@ -1,0 +1,232 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "AWS Erlgame",
+
+  "Parameters" : {
+
+    "KeyName": {
+      "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the instance",
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "ConstraintDescription" : "must be the name of an existing EC2 KeyPair."
+    },
+
+    "InstanceType" : {
+      "Description" : "Erlang Server EC2 instance type",
+      "Type" : "String",
+      "Default" : "t2.micro",
+      "AllowedValues" : [ "t2.micro"],
+      "ConstraintDescription" : "must be a valid EC2 instance type."
+    },
+
+    "SSHLocation" : {
+      "Description" : " The IP address range that can be used to SSH to the EC2 instances",
+      "Type": "String",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "Default": "0.0.0.0/0",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+      "ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
+    },
+
+    "AMI": {
+      "Default": "ami-0f2c5d4cfd5301fac",
+      "Description": "The Amazon Ubuntu sa-east-1 bionic  18.04 LTS amd64 hvm:ebs-ssd AMI",
+      "Type": "String"
+    },
+
+    "EBSVolumeSize": {
+        "Description": "The size of the EBS volume",
+        "Type": "String",
+        "Default": "8"
+    }
+
+  },
+
+  "Resources" : {
+
+    "ErlangServerInstance": {
+      "Type": "AWS::EC2::Instance",
+      "Metadata" : {
+        "AWS::CloudFormation::Init" : {
+          "config" : {
+            "packages" : {
+              "apt" : {
+                "make"              : [],
+                "nginx"             : [],
+                "m4"                : [],
+                "libncurses5-dev"   : [],
+                "libncursesw5-dev"  : [],
+                "openjdk-8-jre"     : [],
+                "flex"              : [],
+                "fop"               : []
+              }
+            },
+            "files" : {
+              "/home/ubuntu/install.sh" : {
+                "content" : { "Fn::Join" : [ "", [
+                  "#!/bin/bash                                                                        \n",
+                  "                                                                                   \n",
+                  "DNS_IP=`curl http://checkip.amazonaws.com`                                         \n",
+                  "ERLANG_ROOT_PATH=/home/ubuntu/                                                     \n",
+                  "ERLANG_PROJECT_NAME=erlgame                                                          \n",
+                  "ERLANG_PROJECT_PATH=${ERLANG_ROOT_PATH}/${ERLANG_PROJECT_NAME}                     \n",
+                  "ERLANG_PACKAGES=https://packages.erlang-solutions.com/erlang-solutions_2.0_all.deb \n",
+                  "ERLANG_VERSION=23                                                                  \n",
+                  "REBAR3_GITHUB=https://github.com/erlang/rebar3.git                                 \n",
+                  "REBAR3_VERSION=3.13.0                                                              \n",
+                  "                                                                                   \n",
+                  "echo \"======== Modifying nginx configuration file \"                              \n",
+                  "sudo sed -i '0,/try_files $uri $uri\\/ =404;/s//proxy_set_header   X-Forwarded-For $remote_addr; \\n                proxy_set_header   Host $http_host;\\n                proxy_pass         \\\"http:\\/\\/127.0.0.1:8080\\\";/' /etc/nginx/sites-enabled/default \n",
+                  "                                                                                   \n",
+                  "echo \"======== Installing Erlang \"                                               \n",
+                  "wget ${ERLANG_PACKAGES}                                                            \n",
+                  "sudo dpkg -i erlang-solutions_2.0_all.deb                                          \n",
+                  "sudo apt-get update                                                                \n",
+                  "sudo apt-get install esl-erlang=1:${ERLANG_VERSION}.* -y                           \n",
+                  "                                                                                   \n",
+                  "# Install rebar3                                                                   \n",
+                  "echo \"======== Installing Rebar3 ${REBAR3_VERSION} at `pwd` \"                    \n",
+                  "git clone --depth 1 --branch ${REBAR3_VERSION} ${REBAR3_GITHUB} && cd rebar3       \n",
+                  "sudo ./bootstrap                                                                   \n",
+                  "sudo ./rebar3 local install                                                        \n",
+                  "sudo mv rebar3 /usr/bin                                                            \n",
+                  "                                                                                   \n",
+                  "# Clone the erlang github repository                                               \n",
+                  "echo \"======== Downloading Erlang project \"                                      \n",
+                  "git -C ${ERLANG_ROOT_PATH} clone https://github.com/thiagoesteves/${ERLANG_PROJECT_NAME}.git \n",
+                  "# Change name to name@ip                                                           \n",
+                  "sudo sed -i \"s/-name.*/-name ${ERLANG_PROJECT_NAME}@${DNS_IP}/g\" ${ERLANG_PROJECT_PATH}/config/vm.args \n",
+                  "echo \"======== Releasing Project \"                                               \n",
+                  "cd ${ERLANG_PROJECT_PATH} && sudo make release                                     \n",
+                  "sudo chown -R ubuntu:ubuntu ${ERLANG_PROJECT_PATH}/                                \n",
+                  "echo \"======== Configuring to Start automatically \"                              \n",
+                  "sudo systemctl enable erlang-app                                                   \n",
+                  "echo \"======== Reboot after installation \"                                       \n",
+                  "                                                                                   \n",
+                  "sleep 10 && sudo reboot &                                                          \n",
+                  "exit 0                                                                             \n"
+                ]]},
+                "mode"  : "000755",
+                "owner" : "root",
+                "group" : "root"
+              },
+              "/etc/init.d/erlang-app" : {
+                "content" : { "Fn::Join" : [ "", [
+                  "#!/bin/bash                                               \n",
+                  "### BEGIN INIT INFO                                       \n",
+                  "# Provides:          erlang-app                           \n",
+                  "# Required-Start:    $all                                 \n",
+                  "# Required-Stop:                                          \n",
+                  "# Default-Start:     2 3 4 5                              \n",
+                  "# Default-Stop:                                           \n",
+                  "# Short-Description: Starts/Stops Erlang application      \n",
+                  "### END INIT INFO                                         \n",
+                  "                                                          \n",
+                  "ERLANG_APP_PATH=/home/ubuntu/erlgame/_build/prod/rel/erlgame/ \n",
+                  "ERLANG_APP_NAME=erlgame                                   \n",
+                  "                                                          \n",
+                  "start() {                                                 \n",
+                  "    # start erlang application                            \n",
+                  "    cd ${ERLANG_APP_PATH}                                 \n",
+                  "    bin/${ERLANG_APP_NAME} start                          \n",
+                  "}                                                         \n",
+                  "                                                          \n",
+                  "stop() {                                                  \n",
+                  "    # stop erlang application                             \n",
+                  "    cd ${ERLANG_APP_PATH}                                 \n",
+                  "    bin/${ERLANG_APP_NAME} stop                           \n",
+                  "}                                                         \n",
+                  "                                                          \n",
+                  "status() {                                                \n",
+                  "    cd ${ERLANG_APP_PATH}                                 \n",
+                  "    bin/${ERLANG_APP_NAME} status                         \n",
+                  "}                                                         \n",
+                  "                                                          \n",
+                  "case \"$1\" in                                            \n",
+                  "    start)                                                \n",
+                  "       start                                              \n",
+                  "       ;;                                                 \n",
+                  "    stop)                                                 \n",
+                  "       stop                                               \n",
+                  "       ;;                                                 \n",
+                  "    restart)                                EAI_AGAIN http:443               \n",
+                  "       ;;                                                 \n",
+                  "    *)                                                    \n",
+                  "       echo \"Usage: $0 {start|stop|status|restart}\"     \n",
+                  "esac                                                      \n",
+                  "                                                          \n",
+                  "exit 0                                                    \n"
+                ]]},
+                "mode"  : "000755",
+                "owner" : "root",
+                "group" : "root"
+              }
+            },
+            "commands" : {
+              "install_erlang" : {
+                "command" : "/home/ubuntu/install.sh > /home/ubuntu/install_log.txt"
+              }
+            }
+          }
+        }
+      },
+      "Properties": {
+        "BlockDeviceMappings" : [{
+          "DeviceName" : "/dev/sda1",
+          "Ebs" : {"VolumeSize" : {"Ref" : "EBSVolumeSize"}}
+        }],
+        "ImageId"        : { "Ref" : "AMI" },
+        "InstanceType"   : { "Ref" : "InstanceType" },
+        "SecurityGroups" : [ {"Ref" : "ErlangServerSecurityGroup"} ],
+        "KeyName"        : { "Ref" : "KeyName" },
+        "UserData"       : { "Fn::Base64" : { "Fn::Join" : ["", [
+           "#!/bin/bash -xe\n",
+           "sudo apt-get update                                             \n",
+           "sudo apt-get install -y python-pip                              \n",
+           "sudo pip install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz\n",
+           "cfn-init -v --resource ErlangServerInstance",
+           " --stack ",
+           {
+             "Ref": "AWS::StackName"
+           },
+           " --region ",
+           {
+             "Ref": "AWS::Region"
+           },
+           "\n",
+           "cfn-signal -e $? –resource ErlangServerInstance",
+           " --stack ",
+           {
+             "Ref": "AWS::StackName"
+           },
+           " --region ",
+           {
+             "Ref": "AWS::Region"
+           },
+           "                                                                 \n"
+        ]]}}
+      }
+    },
+
+    "ErlangServerSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable HTTP via port 80 and ssh by 22",
+        "SecurityGroupIngress" : [
+          {"IpProtocol" : "tcp", "FromPort" : "80",   "ToPort" : "80",   "CidrIp" : "0.0.0.0/0"},
+          {"IpProtocol" : "tcp", "FromPort" : "8080", "ToPort" : "8080", "CidrIp" : "0.0.0.0/0"},
+          {"IpProtocol" : "tcp", "FromPort" : "22",   "ToPort" : "22",   "CidrIp" : { "Ref" : "SSHLocation"}},
+        ]
+      }
+    }
+  },
+
+  "Outputs" : {
+    "WebsiteURL" : {
+      "Description" : "URL for newly created Erlang Server stack",
+      "Value" : { "Fn::Join" : ["", ["http://", { "Fn::GetAtt" : [ "ErlangServerInstance", "PublicDnsName" ]}]] }
+    }
+  }
+}
+
