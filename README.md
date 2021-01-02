@@ -2,7 +2,9 @@
 [![Coverage Status](https://coveralls.io/repos/github/thiagoesteves/erlgame/badge.svg?branch=main)](https://coveralls.io/github/thiagoesteves/erlgame?branch=main)
 [![Erlant/OTP Release](https://img.shields.io/badge/Erlang-OTP--23.0-green.svg)](https://github.com/erlang/otp/releases/tag/OTP-23.0)
 
-# This application is a game webserver written in Erlang
+# Game webserver written in Erlang
+![Erlgame](/doc/erlgame_snake.png)
+
 
 The app is an example of how Erlang can be used to be part of the Game backend as a server for a single player or multiple players. In this code you will find examples of how to use cowboy webserver, gen_statem (and how to recover from a crash), supervision tree using simple_one_for_one, aws cloud formation to deploy using aws create stack, common tests, gun to test webserver, etc.
 
