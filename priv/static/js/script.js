@@ -4,12 +4,15 @@ var arena = {
   row:    21,
   column: 21,
 };
+var update_snake_board_time = 200;
 var websocket;
 var player = document.getElementById("player");
 var output = document.getElementById("output");
 var board_game = document.querySelector('.game');
 var player_points = document.getElementById("current player");
 var best_player_points = document.getElementById("best player");
+var snake_board = [''];
+var board_fifo;
 // Register Callbacks
 document.onkeydown = checkKey;
 
@@ -57,8 +60,8 @@ function updateSnakeBoard(json_from_erlang) {
       }
     }
   }
-  // Print game board
-  board_game.innerHTML = drawning;
+  // Add the board game in the FIFO
+  snake_board.unshift(drawning);
   // Print Player points
   showPlayerPoints(obj.points);
 };
@@ -148,6 +151,13 @@ function createSnakeGame() {
   sendMsg(msg);
   // Hide button
   document.getElementById('play').style.visibility = 'hidden';
+  // Create function that will update the snake board
+  board_fifo = setInterval(function() {
+      // Remove a board game from the FIFO and print it
+      if (typeof snake_board !== 'undefined' && snake_board.length > 0) {
+        board_game.innerHTML = snake_board.pop();
+      }
+    }, update_snake_board_time);
 };
 
 function requestSnakeBestPlayer() {
@@ -169,5 +179,8 @@ function sendMsg(msg) {
 };
 
 function gameOver() {
+  // Stop board from being updated
+  clearInterval(board_fifo);
+  // Log game is over
   console.log("Game Over");
 };
