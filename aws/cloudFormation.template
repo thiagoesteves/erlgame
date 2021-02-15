@@ -30,8 +30,8 @@
     },
 
     "AMI": {
-      "Default": "ami-0f2c5d4cfd5301fac",
-      "Description": "The Amazon Ubuntu sa-east-1 bionic  18.04 LTS amd64 hvm:ebs-ssd AMI",
+      "Default": "ami-0e765cee959bcbfce",
+      "Description": "Ubuntu Server 20.04 LTS amd64 x86 hvm:ebs-ssd AMI",
       "Type": "String"
     },
 
@@ -183,9 +183,11 @@
         "UserData"       : { "Fn::Base64" : { "Fn::Join" : ["", [
            "#!/bin/bash -xe\n",
            "sudo apt-get update                                             \n",
-           "sudo apt-get install -y python-pip                              \n",
-           "sudo pip install https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz\n",
-           "cfn-init -v --resource ErlangServerInstance",
+           "sudo apt-get install -y python-setuptools                       \n",
+           "sudo mkdir -p /opt/aws/bin                                      \n",
+           "wget https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-py3-latest.tar.gz  \n",
+           "sudo python3 -m easy_install --script-dir /opt/aws/bin aws-cfn-bootstrap-py3-latest.tar.gz \n",
+           "/opt/aws/bin/cfn-init -v --resource ErlangServerInstance",
            " --stack ",
            {
              "Ref": "AWS::StackName"
@@ -195,7 +197,7 @@
              "Ref": "AWS::Region"
            },
            "\n",
-           "cfn-signal -e $? –resource ErlangServerInstance",
+           "/opt/aws/bin/cfn-signal -e $? –resource ErlangServerInstance",
            " --stack ",
            {
              "Ref": "AWS::StackName"

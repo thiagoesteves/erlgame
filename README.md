@@ -1,3 +1,4 @@
+![github workflow](https://github.com/thiagoesteves/erlgame/workflows/Erlang%20CI/badge.svg)
 [![Build Status](https://secure.travis-ci.org/thiagoesteves/erlgame.svg?branch=main)](http://travis-ci.org/thiagoesteves/erlgame)
 [![Coverage Status](https://coveralls.io/repos/github/thiagoesteves/erlgame/badge.svg?branch=main)](https://coveralls.io/github/thiagoesteves/erlgame?branch=main)
 [![Erlant/OTP Release](https://img.shields.io/badge/Erlang-OTP--23.0-green.svg)](https://github.com/erlang/otp/releases/tag/OTP-23.0)
