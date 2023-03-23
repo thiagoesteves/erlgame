@@ -28,7 +28,7 @@ Dispatch = cowboy_router:compile([
             {"/static/[...]", cowboy_static,      {priv_dir, erlgame, "static"}}
     ]}
   ]),
-  {ok, _} = cowboy:start_clear(http, [{port, 8080}], #{
+  {ok, _} = cowboy:start_clear(http, [{port, 4000}], #{
     env => #{dispatch => Dispatch}
   }),
   erlgame_sup:start_link().

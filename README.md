@@ -23,7 +23,7 @@ To compile and run
 ```
 make
 ```
-Open your web browser, got to http://127.0.0.1:8080/ type your Name and play
+Open your web browser, got to http://127.0.0.1:4000/ type your Name and play
 
 ### Unit Test and coverage
 

@@ -31,7 +31,7 @@
 %%%===================================================================
 
 -define(HMTL_OK,             200). %% The request is OK
--define(LOCAL_URL(CMD),      "http://localhost:8080" ++ CMD).
+-define(LOCAL_URL(CMD),      "http://localhost:4000" ++ CMD).
 -define(INDEX_HTML_FILE,     "../../../../priv/index.html").
 -define(SNAKE_GPROC_KEY(User), {p,l,{list_to_atom(User), erlgame_snake_sm, notify_on_update}}).
 
@@ -144,7 +144,7 @@ erlgame_snake_websocket_connect_ok(_Config) ->
 
   %% Connect with the application and open the websockets
   {ok, { ConnPid, StreamRef }} = 
-    open_websocket_connection("localhost", 8080, "/websocket"),
+    open_websocket_connection("localhost", 4000, "/websocket"),
 
   %% Expect the init  message
   ?assertEqual( {ok, {text, ?INITIAL_MESSAGE}}, 
@@ -167,7 +167,7 @@ erlgame_snake_websocket_play_ok(_Config) ->
 
   %% Connect with the application and open the websockets
   {ok, { ConnPid, StreamRef }} = 
-    open_websocket_connection("localhost", 8080, "/websocket"),
+    open_websocket_connection("localhost", 4000, "/websocket"),
 
   %% Expect the init  message
   {ok, {text, ?INITIAL_MESSAGE}} = wait_msg({ ConnPid, StreamRef }),
@@ -197,7 +197,7 @@ erlgame_snake_websocket_game_over_ok(_Config) ->
 
   %% Connect with the application and open the websockets
   {ok, { ConnPid, StreamRef }} = 
-    open_websocket_connection("localhost", 8080, "/websocket"),
+    open_websocket_connection("localhost", 4000, "/websocket"),
 
   %% Expect the init  message
   {ok, {text, ?INITIAL_MESSAGE}} = wait_msg({ ConnPid, StreamRef }),
@@ -231,7 +231,7 @@ erlgame_snake_websocket_best_player_ok(_Config) ->
 
   %% Connect with the application and open the websockets
   {ok, { ConnPid, StreamRef }} = 
-    open_websocket_connection("localhost", 8080, "/websocket"),
+    open_websocket_connection("localhost", 4000, "/websocket"),
 
   %% Expect the init  message
   {ok, {text, ?INITIAL_MESSAGE}} = wait_msg({ ConnPid, StreamRef }),
@@ -265,7 +265,7 @@ erlgame_snake_websocket_connect_same_user_ok(_Config) ->
 
   %% Connect with the application and open the websockets
   {ok, { ConnPid, StreamRef }} = 
-    open_websocket_connection("localhost", 8080, "/websocket"),
+    open_websocket_connection("localhost", 4000, "/websocket"),
   %% Expect the init  message
   {ok, {text, ?INITIAL_MESSAGE}} = wait_msg({ ConnPid, StreamRef }),
   %% Create snake game for the default player
@@ -279,7 +279,7 @@ erlgame_snake_websocket_connect_same_user_ok(_Config) ->
 
   %% Connect another client to the same user
   {ok, { ConnPid2, StreamRef2 }} = 
-    open_websocket_connection("localhost", 8080, "/websocket"),
+    open_websocket_connection("localhost", 4000, "/websocket"),
   %% Expect the init  message
   {ok, {text, ?INITIAL_MESSAGE}} = wait_msg({ ConnPid2, StreamRef2 }),
   %% Create snake game for the default player again
