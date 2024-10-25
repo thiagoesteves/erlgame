@@ -18,13 +18,11 @@ document.onkeydown = checkKey;
 
 function connectServer()
 {
-  if (window.location.href.indexOf("4000") > -1) {
-    wsHost = "ws://" + window.location.host + "/websocket";
-  } else {
-    wsHost = "ws://" + window.location.host + ":4000/websocket";
-  }
-  showErlangOutputScreen('<b>Connecting to: ' +  wsHost + '</b>');
-  websocket = new WebSocket(wsHost);
+
+  wssHost = "wss://" + window.location.host + "/websocket";
+
+  showErlangOutputScreen('<b>Connecting to: ' +  wssHost + '</b>');
+  websocket = new WebSocket(wssHost);
   // Register Callbacks
   websocket.onopen    = function(evt) { onOpen(evt) };
   websocket.onclose   = function(evt) { onClose(evt) };
