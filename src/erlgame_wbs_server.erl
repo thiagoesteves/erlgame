@@ -80,7 +80,7 @@ websocket_info(?SNAKE_SM_BEST_PLAYERS(PlayersList), State) ->
 %%%===================================================================
 -spec init(map(), cowboy:req()) -> {any(), cowboy:req(), any()}.
 init(Req0, Opts) ->
-  logger:set_module_level(?MODULE, error),
+  logger:set_module_level(?MODULE, info),
   {cowboy_websocket, Req0, Opts}.
 
 %%====================================================================

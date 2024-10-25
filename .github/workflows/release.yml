@@ -1,0 +1,101 @@
+name: Publish the project on AWS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Building a release and version file
+    runs-on: ubuntu-22.04
+    outputs:
+      tag: ${{ steps.save-tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup BEAM
+        uses: erlef/setup-beam@v1
+        with:
+          version-file: .tool-versions
+          version-type: strict
+          rebar3-version: '3.24.0'
+   
+      - name: Capture GITHUB_SHORT_SHA
+        run: |
+          GITHUB_SHORT_SHA=$(git rev-parse --short ${{ github.sha }})
+          echo "GITHUB_SHORT_SHA=${GITHUB_SHORT_SHA}" >> $GITHUB_ENV
+      
+      - name: Capture and update project mix version
+        id: save-tag
+        run: |
+          ERL_VERSION=`grep "{vsn, " src/erlgame.app.src | awk -F'"' '{print $2}'`
+          PROJ_TAG=${ERL_VERSION}-${GITHUB_SHORT_SHA}
+          echo "PROJ_TAG=${PROJ_TAG}" >> $GITHUB_ENV
+          echo "tag=$PROJ_TAG" >> "$GITHUB_OUTPUT"
+          echo "Creating the tag: $PROJ_TAG"
+
+      - name: Update erlang project version
+        run: |
+          sed -i "s/.*{vsn,.*/  {vsn, \"${{ env.PROJ_TAG }}\"},/" src/erlgame.app.src
+          sed -i "s/.*{release, {erlgame.*/  {release, {erlgame, \"${{ env.PROJ_TAG }}\"}, [/" rebar.config
+
+      - name: Install Gleam dependencies
+        run: rebar3 deps get
+
+      - name: Generate the release files
+        run: rebar3 as prod tar
+
+      - name: Create Release file version
+        run: |
+          echo "{\"version\":\"${{ env.PROJ_TAG }}\",\"hash\":\"${GITHUB_SHA}\"}" | jq > current.json
+
+      - name: 'Upload release file artifact'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-file
+          path: _build/prod/rel/erlgame/erlgame-${{ env.PROJ_TAG }}.tar.gz
+          retention-days: 5
+
+      - name: 'Upload version file artifact'
+        uses: actions/upload-artifact@v4
+        with:
+          name: version-file
+          path: current.json
+          retention-days: 5
+
+  upload_aws:
+    name: Upload files to AWS environment
+    needs: build
+    runs-on: ubuntu-22.04
+    env:
+      VERSION_SHA: ${{ needs.build.outputs.tag }}
+    permissions:
+      contents: write
+    steps:
+      - name: Download version file artefact
+        uses: actions/download-artifact@v4
+        with:
+          name: version-file
+
+      - name: Download release file artefact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-file
+ 
+      - name: Copy a release file to the s3 distribution folder
+        uses: prewk/s3-cp-action@v2
+        with:
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_region: "us-east-1"
+          source: "erlgame-${VERSION_SHA}.tar.gz"
+          dest: "s3://erlgame-${{ secrets.CLOUD_ENV_NAME }}-distribution/dist/erlgame/erlgame-${VERSION_SHA}.tar.gz"
+
+      - name: Copy a version file to the s3 version folder
+        uses: prewk/s3-cp-action@v2
+        with:
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_region: "us-east-1"
+          source: "current.json"
+          dest: "s3://erlgame-${{ secrets.CLOUD_ENV_NAME }}-distribution/versions/erlgame/${{ secrets.CLOUD_ENV_NAME }}/current.json"

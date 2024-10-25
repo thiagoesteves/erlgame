@@ -21,6 +21,12 @@
 %%====================================================================
 
 start(_StartType, _StartArgs) ->
+%% Retrieve the port from the environment variable
+PortString = os:getenv("PORT"),
+Port = case list_to_integer(PortString) of
+    {error, _} -> 4000; %% Fallback to default port
+    Value -> Value
+end,
 Dispatch = cowboy_router:compile([
     {'_', [
             {"/",             cowboy_static,      {priv_file, erlgame, "index.html"}},
@@ -28,7 +34,7 @@ Dispatch = cowboy_router:compile([
             {"/static/[...]", cowboy_static,      {priv_dir, erlgame, "static"}}
     ]}
   ]),
-  {ok, _} = cowboy:start_clear(http, [{port, 4000}], #{
+  {ok, _} = cowboy:start_clear(http, [{port, Port}], #{
     env => #{dispatch => Dispatch}
   }),
   erlgame_sup:start_link().

@@ -1,9 +1,9 @@
 ## Increase number of concurrent ports/sockets
 -env ERL_MAX_PORTS 10240
 
--sname erlgame
--setcookie erlgame_cookie
--kernel inet_dist_listen_min 9100 inet_dist_listen_max 9155
+-sname ${RELEASE_NODE}
+-setcookie ${RELEASE_COOKIE}
+${RELEASE_SSL_OPTIONS}
 
 +K true
 +A30
