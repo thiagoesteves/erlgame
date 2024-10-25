@@ -1,7 +1,7 @@
-.PHONY: all test clean compile release check coveralls
+.PHONY: run test clean compile release check coveralls
 	
-all:
-	ERL_FLAGS=" -args_file ${PWD}/config/vm.args" rebar3 shell --apps erlgame
+run:
+	rebar3 shell --apps erlgame
 	
 test:
 	rebar3 as test ct --cover && rebar3 as test cover --verbose

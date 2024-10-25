@@ -15,7 +15,8 @@ cd erlgame
 ```
 To compile and run
 ```
-make
+export PORT=4000
+make run
 ```
 Open your web browser, got to http://127.0.0.1:4000/, type your Name and play
 
