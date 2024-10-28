@@ -1,0 +1,59 @@
+name: Manual Deployment with tags
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployment:
+        description: "Type of deployment"
+        required: true
+        default: "full"
+        type: choice
+        options:
+          - "full-deployment"
+          - "hot-upgrade"
+
+jobs:
+  create-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.save-tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Capture GITHUB_SHORT_SHA
+        run: |
+          GITHUB_SHORT_SHA=$(git rev-parse --short ${{ github.sha }})
+          echo "GITHUB_SHORT_SHA=${GITHUB_SHORT_SHA}" >> $GITHUB_ENV
+
+      - name: Capture and append project source version
+        id: save-tag
+        run: |
+          ERL_VERSION=`grep "{vsn, " src/erlgame.app.src | awk -F'"' '{print $2}'`
+          PROJ_TAG=${ERL_VERSION}-${GITHUB_SHORT_SHA}
+          echo "PROJ_TAG=${PROJ_TAG}" >> $GITHUB_ENV
+          echo "tag=$PROJ_TAG" >> "$GITHUB_OUTPUT"
+          echo "Creating the tag: $PROJ_TAG"
+
+      - uses: rickstaa/action-create-tag@v1
+        id: "tag_create"
+        with:
+          tag: ${{ env.PROJ_TAG }}
+          message: "Created ${{ inputs.deployment }} tag ${{ env.PROJ_TAG }}"
+
+  deploy-full-deployment:
+    if: inputs.deployment == 'full-deployment'
+    needs: create-tag
+    uses: ./.github/workflows/full-deployment.yaml
+    with:
+      tag: ${{ needs.create-tag.outputs.tag }}
+    secrets: inherit
+
+  deploy-hot-upgrade:
+    if: inputs.deployment == 'hot-upgrade'
+    needs: create-tag
+    uses: ./.github/workflows/hot-upgrade.yaml
+    with:
+      tag: ${{ needs.create-tag.outputs.tag }}
+    secrets: inherit
