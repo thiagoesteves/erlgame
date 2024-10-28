@@ -29,7 +29,7 @@
 -export([init/1,
          terminate/3,
          callback_mode/0,
-         code_change/3]).
+         code_change/4]).
 
 %% gen_statem states
 -export([join/3,
@@ -111,8 +111,8 @@ terminate(Reason, State, Data = #{user := UserId}) ->
   ok.
 
 %% @private
-code_change(_OldVsn, State, _Extra) ->
-  {ok, State}.
+code_change(_OldVsn, State, Data, _Extra) ->
+  {ok, State, Data}.
 
 callback_mode() ->
   [state_functions, state_enter].

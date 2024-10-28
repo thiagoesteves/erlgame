@@ -1,0 +1,116 @@
+name: Deploy a hot-upgrade package/version to AWS
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+
+jobs:
+  build:
+    name: Building a release and version file
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup BEAM
+        uses: erlef/setup-beam@v1
+        with:
+          version-file: .tool-versions
+          version-type: strict
+          rebar3-version: '3.24.0'
+
+      - name: Retrieve the deployed current.json
+        uses: prewk/s3-cp-action@v2
+        with:
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_region: "sa-east-1"
+          source: "s3://erlgame-${{ secrets.CLOUD_ENV_NAME }}-distribution/versions/erlgame/${{ secrets.CLOUD_ENV_NAME }}/current.json"
+          dest: "./s3-current.json"
+
+      - name: Compile the current deployed version
+        run: |
+          VERSION=$(cat s3-current.json | jq '.version' |  tr -d '"')
+          HASH=$(cat s3-current.json | jq '.hash' |  tr -d '"')
+          echo ${VERSION} ${HASH}
+          git checkout ${HASH}
+          sed -i "s/.*{vsn,.*/  {vsn, \"${VERSION}\"},/" src/erlgame.app.src
+          sed -i "s/.*{release, {erlgame.*/  {release, {erlgame, \"${VERSION}\"}, [/" rebar.config
+          rebar3 release
+          echo "Return to the current branch head: ${GITHUB_SHA}"
+          git checkout ${GITHUB_SHA}
+
+      - name: Update erlang project version
+        run: |
+          sed -i "s/.*{vsn,.*/  {vsn, \"${{ inputs.tag }}\"},/" src/erlgame.app.src
+          sed -i "s/.*{release, {erlgame.*/  {release, {erlgame, \"${{ inputs.tag }}\"}, [/" rebar.config
+
+      - name: Generate a Release
+        run: rebar3 as prod release
+
+      - name: Generate Appup files
+        run: rebar3 as prod appup generate --previous "${PWD}/_build/default/rel/erlgame"  --target_dir "${PWD}/priv/appup"
+
+      - name: Echo Appup File
+        run: cat "${PWD}/priv/appup/erlgame.appup"
+
+      - name: Generate the tar release
+        run: rebar3 as prod tar
+
+      - name: Create Release file version
+        run: |
+          echo "{\"version\":\"${{ inputs.tag }}\",\"hash\":\"${GITHUB_SHA}\"}" | jq > current.json
+
+      - name: 'Upload release file artifact'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-file
+          path: _build/prod/rel/erlgame/erlgame-${{ inputs.tag }}.tar.gz
+          retention-days: 5
+
+      - name: 'Upload version file artifact'
+        uses: actions/upload-artifact@v4
+        with:
+          name: version-file
+          path: current.json
+          retention-days: 5
+
+  upload_aws:
+    name: Upload files to AWS environment
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download version file artefact
+        uses: actions/download-artifact@v4
+        with:
+          name: version-file
+
+      - name: Download release file artefact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-file
+
+      - name: Copy a release file to the s3 distribution folder
+        uses: prewk/s3-cp-action@v2
+        with:
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_region: "sa-east-1"
+          source: "erlgame-${{ inputs.tag }}.tar.gz"
+          dest: "s3://erlgame-${{ secrets.CLOUD_ENV_NAME }}-distribution/dist/erlgame/erlgame-${{ inputs.tag }}.tar.gz"
+
+      - name: Copy a version file to the s3 version folder
+        uses: prewk/s3-cp-action@v2
+        with:
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_region: "sa-east-1"
+          source: "current.json"
+          dest: "s3://erlgame-${{ secrets.CLOUD_ENV_NAME }}-distribution/versions/erlgame/${{ secrets.CLOUD_ENV_NAME }}/current.json"
