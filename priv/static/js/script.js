@@ -18,8 +18,14 @@ document.onkeydown = checkKey;
 
 function connectServer()
 {
+  // Get the current host (e.g., "localhost:8080" or "example.com")
+  const isLocalHost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
 
-  wssHost = "wss://" + window.location.host + "/websocket";
+  // Choose the protocol based on whether the host is local or not
+  const protocol = isLocalHost ? "ws://" : "wss://";
+
+  // Build the WebSocket URL
+  const wssHost = protocol + window.location.host + "/websocket";
 
   showErlangOutputScreen('<b>Connecting to: ' +  wssHost + '</b>');
   websocket = new WebSocket(wssHost);
