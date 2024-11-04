@@ -43,6 +43,7 @@ jobs:
           sed -i "s/.*{release, {erlgame.*/  {release, {erlgame, \"${VERSION}\"}, [/" rebar.config
           rebar3 release
           echo "Return to the current branch head: ${GITHUB_SHA}"
+          git checkout .
           git checkout ${GITHUB_SHA}
 
       - name: Update erlang project version
