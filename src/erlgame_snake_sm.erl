@@ -112,6 +112,7 @@ terminate(Reason, State, Data = #{user := UserId}) ->
 
 %% @private
 code_change(_OldVsn, State, Data, _Extra) ->
+  io:format("( ͡° ͜ʖ ͡°)_/¯ Hot code reloading rocks!!!"),
   {ok, State, Data}.
 
 callback_mode() ->

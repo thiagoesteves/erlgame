@@ -56,7 +56,7 @@ function updateSnakeBoard(json_from_erlang) {
   for (var row=(arena.row-1); row>=0; row--) {
     for (var column=0; column<arena.column; column++) {
       if (obj.food.x === column && obj.food.y === row) {
-        drawning += `<div style="background-color: red;">@</div>`;
+        drawning += `<div style="background-color: red;"></div>`;
       } else if (snake_position.find(elem => elem.x === column && elem.y === row)) {
         drawning += `<div style="background-color: lightblue;"> </div>`;
       } else {
