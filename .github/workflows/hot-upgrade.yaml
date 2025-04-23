@@ -10,7 +10,7 @@ on:
 jobs:
   build:
     name: Building a release and version file
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
@@ -23,6 +23,9 @@ jobs:
           version-file: .tool-versions
           version-type: strict
           rebar3-version: '3.24.0'
+
+      - name: Install libcap-dev [recommended by erlexec]
+        run: sudo apt-get install libcap-dev -y
 
       - name: Retrieve the deployed current.json
         uses: prewk/s3-cp-action@v2
@@ -84,7 +87,7 @@ jobs:
   upload_aws:
     name: Upload files to AWS environment
     needs: build
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
