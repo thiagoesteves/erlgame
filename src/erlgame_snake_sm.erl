@@ -106,7 +106,7 @@ terminate(normal, _, _) ->
   ok;
 
 terminate(Reason, State, Data = #{user := UserId}) ->
-  ?LOG_ERROR("I'm Terminating now Data: ~p ~p", [Reason, Data]),
+  ?LOG_ERROR("I'm Terminating now Data (Hot): ~p ~p", [Reason, Data]),
   erlgame_db:save_game_state(UserId, ?MODULE, {State, Data}),
   ok.
 
