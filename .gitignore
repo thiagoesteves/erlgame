@@ -24,3 +24,6 @@ _checkouts/
 # IDE files
 .project
 .settings/*
+
+# Ignore appup file
+priv/appup/*
