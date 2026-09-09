@@ -1,6 +1,6 @@
 {application, erlgame,
  [{description, "Erlang Game"},
-  {vsn, "0.1.2"},
+  {vsn, "2.0.0"},
   {registered, []},
   {mod, {erlgame_app, []}},
   {applications,
