@@ -53,6 +53,11 @@ jobs:
           RELEASE_NODE: erlgame
           RELEASE_COOKIE: ci-relup-guard
           RELEASE_SSL_OPTIONS: ""
+          # erlgame_app:start/2 does list_to_integer(os:getenv("PORT"))
+          # unconditionally - with PORT unset, os:getenv/1 returns `false`
+          # and that call crashes outright, which this action can only
+          # ever report as a generic boot timeout.
+          PORT: "4000"
         with:
           old-ref: ${{ github.event.pull_request.base.sha }}
           release-name: erlgame
