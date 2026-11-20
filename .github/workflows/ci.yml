@@ -40,6 +40,19 @@ jobs:
           version-type: strict
 
       - uses: deployex/relup-guard-erlang@v1
+        env:
+          # config/vm.args uses ${RELEASE_NODE}/${RELEASE_COOKIE}/
+          # ${RELEASE_SSL_OPTIONS} placeholders that deployex fills in at
+          # deploy time; nothing here does that, so without
+          # RELX_REPLACE_OS_VARS=true the boot script passes the literal
+          # "${RELEASE_SSL_OPTIONS}" text to erl and the release fails to
+          # boot. The node name/cookie values themselves don't matter -
+          # relup-guard-erlang overwrites those two vm.args lines itself
+          # once the release is extracted.
+          RELX_REPLACE_OS_VARS: "true"
+          RELEASE_NODE: erlgame
+          RELEASE_COOKIE: ci-relup-guard
+          RELEASE_SSL_OPTIONS: ""
         with:
           old-ref: ${{ github.event.pull_request.base.sha }}
           release-name: erlgame
