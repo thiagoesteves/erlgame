@@ -44,7 +44,7 @@ jobs:
           git checkout ${HASH}
           sed -i "s/.*{vsn,.*/  {vsn, \"${VERSION}\"},/" src/erlgame.app.src
           sed -i "s/.*{release, {erlgame.*/  {release, {erlgame, \"${VERSION}\"}, [/" rebar.config
-          rebar3 release
+          rebar3 as prod release
           echo "Return to the current branch head: ${GITHUB_SHA}"
           git checkout .
           git checkout ${GITHUB_SHA}
@@ -55,13 +55,15 @@ jobs:
           sed -i "s/.*{release, {erlgame.*/  {release, {erlgame, \"${{ inputs.tag }}\"}, [/" rebar.config
 
       - name: Generate a Release
+        # rebar3_jellyfish_plugin's post-compile hook diffs the freshly
+        # compiled app against the previous version built above (found
+        # under _build/prod/rel/erlgame/lib) and writes the appup under
+        # rel/appups/lib/, from where the relx overlay rule copies it
+        # into the release below.
         run: rebar3 as prod release
 
-      - name: Generate Appup files
-        run: rebar3 as prod appup generate --previous "${PWD}/_build/default/rel/erlgame"  --target_dir "${PWD}/priv/appup"
-
       - name: Echo Appup File
-        run: cat "${PWD}/priv/appup/erlgame.appup"
+        run: cat "rel/appups/lib/erlgame-${{ inputs.tag }}/ebin/erlgame.appup"
 
       - name: Generate the tar release
         run: rebar3 as prod tar

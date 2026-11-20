@@ -24,3 +24,23 @@ jobs:
 
       - name: Run tests
         run: rebar3 ct
+
+  relup-guard-erlang:
+    name: Verify the hot upgrade from main actually applies
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup BEAM
+        uses: erlef/setup-beam@v1
+        with:
+          version-file: .tool-versions
+          version-type: strict
+
+      - uses: deployex/relup-guard-erlang@v1
+        with:
+          old-ref: ${{ github.event.pull_request.base.sha }}
+          release-name: erlgame
