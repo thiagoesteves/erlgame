@@ -17,7 +17,6 @@ jobs:
         with:
           version-file: .tool-versions
           version-type: strict
-          rebar3-version: '3.24.0'
 
       - name: Compile
         run: rebar3 compile
