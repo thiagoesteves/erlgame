@@ -25,5 +25,6 @@ _checkouts/
 .project
 .settings/*
 
-# Ignore appup file
-priv/appup/*
+# rebar3_jellyfish_plugin stages generated appup files here before
+# relx's overlay rule copies them into the release
+rel/appups/
